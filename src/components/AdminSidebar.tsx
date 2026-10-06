@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ChevronRight, GraduationCap, ShieldCheck, X } from 'lucide-react';
+import { ArrowLeft, ChevronRight, ShieldCheck, X, LogOut, User as UserIcon } from 'lucide-react';
 import { schoolConfig } from '../config/schoolConfig';
+import { User as UserType } from '../services/auth';
 
 export type AdminTab = 'students' | 'finance' | 'grades' | 'register';
 
@@ -29,6 +30,8 @@ interface AdminSidebarProps {
   onPreviewFees: () => void;
   onBackToSite: () => void;
   onClose?: () => void;
+  user: UserType | null;
+  onLogout: () => void;
 }
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
@@ -38,6 +41,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   onPreviewFees,
   onBackToSite,
   onClose,
+  user,
+  onLogout,
 }) => {
   const groupOf = (tab: AdminTab) =>
     items.find((item) => item.children?.some((c) => c.id === tab))?.id;
@@ -72,9 +77,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     <div className="flex h-full flex-col bg-[#0f172a] text-slate-300">
       {/* Brand / Identity */}
       <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-white/10 px-4">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-tr from-[#16a34a] to-emerald-500 shadow-md">
-          <GraduationCap className="h-5 w-5 text-white" />
-        </div>
+        <img
+          src="/logo.jpeg"
+          alt={`${schoolConfig.shortName} Logo`}
+          className="w-9 h-9 shrink-0 rounded-lg object-cover shadow-md"
+        />
         <div className="min-w-0">
           <div className="truncate text-[13px] font-bold leading-tight text-white">
             {schoolConfig.shortName}
@@ -210,10 +217,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         <div className="mx-1 rounded-xl border border-white/10 bg-white/5 p-3">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#7c3aed]/25 text-[11px] font-bold text-[#c4b5fd]">
-              AD
+              {user?.first_name?.[0] || user?.username?.[0] || 'A'}{user?.last_name?.[0] || ''}
             </div>
             <div className="min-w-0">
-              <div className="truncate text-xs font-semibold text-white">Admissions Officer</div>
+              <div className="truncate text-xs font-semibold text-white">
+                {user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : user?.username || 'Admissions Officer'}
+              </div>
               <div className="truncate text-[10px] text-slate-500">{schoolConfig.location}</div>
             </div>
           </div>
@@ -221,13 +230,20 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       </nav>
 
       {/* Footer */}
-      <div className="shrink-0 border-t border-white/10 p-3">
+      <div className="shrink-0 border-t border-white/10 p-3 space-y-2">
         <button
           onClick={onBackToSite}
           className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-xs font-semibold text-slate-200 transition-colors hover:bg-white/10 hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Back to Public Portal</span>
+        </button>
+        <button
+          onClick={onLogout}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-xs font-semibold text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300"
+        >
+          <LogOut className="h-4 w-4" />
+          <span>Sign Out</span>
         </button>
       </div>
     </div>

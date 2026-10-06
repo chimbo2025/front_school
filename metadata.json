@@ -1,6 +1,6 @@
 {
   "name": "SchoolPortal - Zanzibar Online Admission & Fees",
-  "description": "Mobile-first online admission and fees system for Bright Future School in Zanzibar, Tanzania.",
+  "description": "Mobile-first online admission and fees system for SEA COAST ACADEMY in Zanzibar, Tanzania.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

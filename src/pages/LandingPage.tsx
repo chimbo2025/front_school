@@ -156,7 +156,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
 
   const testimonials = [
     {
-      quote: "Bright Future School has transformed my daughter's confidence in English and mathematics. The teachers in Zanzibar are caring, disciplined, and genuinely dedicated to our children's success.",
+      quote: "SEA COAST ACADEMY has transformed my daughter's confidence in English and mathematics. The teachers in Zanzibar are caring, disciplined, and genuinely dedicated to our children's success.",
       author: "Bi Mwanaisha Ali",
       role: "Parent of Amina (Grade 1)",
       location: "Mwanakwerekwe, Unguja",
@@ -241,7 +241,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
                 <div className="relative rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20 bg-slate-800">
                   <img
                     src={heroImage}
-                    alt="Bright Future School Zanzibar Students smiling in uniform"
+                    alt="SEA COAST ACADEMY Students smiling in uniform"
                     className="w-full h-auto object-cover aspect-16/10 transform hover:scale-102 transition-transform duration-700"
                     referrerPolicy="no-referrer"
                   />

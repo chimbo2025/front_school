@@ -25,17 +25,22 @@ import { FeeStatement } from '../components/FeeStatement';
 import { PaymentModal } from '../components/PaymentModal';
 import { AdminSidebar, AdminNavItem, AdminTab } from '../components/AdminSidebar';
 import { StudentStatus } from '../types';
+import { User as UserType } from '../services/auth';
 
 interface StudentDetailPageProps {
   studentId: string;
   onNavigate: (path: string) => void;
   onOpenFeesModal: () => void;
+  user: UserType | null;
+  onLogout: () => void;
 }
 
 export const StudentDetailPage: React.FC<StudentDetailPageProps> = ({
   studentId,
   onNavigate,
   onOpenFeesModal,
+  user,
+  onLogout,
 }) => {
   const { 
     getStudentById, 
@@ -134,6 +139,8 @@ export const StudentDetailPage: React.FC<StudentDetailPageProps> = ({
     onSelectTab: handleSelectTab,
     onPreviewFees: onOpenFeesModal,
     onBackToSite: () => onNavigate('/'),
+    user,
+    onLogout,
   };
 
   // Mobile drawer: close on Escape and lock background scroll
@@ -202,7 +209,9 @@ export const StudentDetailPage: React.FC<StudentDetailPageProps> = ({
             {/* Quick Status updater */}
             <select
               value={student.status}
-              onChange={(e) => updateStudentStatus(student.id, e.target.value as StudentStatus)}
+              onChange={async (e) => {
+                await updateStudentStatus(student.id, e.target.value as StudentStatus);
+              }}
               className="px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-[#7c3aed]"
             >
               <option value="Pending">Status: Pending</option>
@@ -380,6 +389,14 @@ export const StudentDetailPage: React.FC<StudentDetailPageProps> = ({
                   <span className="font-bold text-slate-900 text-sm">{student.parentName}</span>
                 </div>
                 <div>
+                  <span className="text-slate-400 block">Relationship to Student</span>
+                  <span className="font-semibold text-slate-800 text-sm">{student.parentRelationship}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block">National ID / ZAN ID</span>
+                  <span className="font-mono font-semibold text-slate-800 text-sm">{student.parentNationalId}</span>
+                </div>
+                <div>
                   <span className="text-slate-400 block">Phone Number</span>
                   <a
                     href={`tel:${student.parentPhone}`}
@@ -392,6 +409,33 @@ export const StudentDetailPage: React.FC<StudentDetailPageProps> = ({
                 <div>
                   <span className="text-slate-400 block">Parent Address</span>
                   <span className="text-slate-800">{student.parentAddress}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Emergency Contact Card */}
+            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs space-y-4">
+              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-2">
+                Emergency Contact
+              </h2>
+              <div className="space-y-3 text-xs">
+                <div>
+                  <span className="text-slate-400 block">Full Name</span>
+                  <span className="font-bold text-slate-900 text-sm">{student.emergencyContactName}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block">Relationship to Student</span>
+                  <span className="font-semibold text-slate-800 text-sm">{student.emergencyContactRelationship}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block">Phone Number</span>
+                  <a
+                    href={`tel:${student.emergencyContactPhone}`}
+                    className="font-mono font-bold text-red-600 hover:underline flex items-center gap-1 text-sm mt-0.5"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    {student.emergencyContactPhone}
+                  </a>
                 </div>
               </div>
             </div>

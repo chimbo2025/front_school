@@ -6,7 +6,6 @@ import {
   ChevronUp,
   CreditCard,
   FileText,
-  GraduationCap,
   Phone,
   Printer,
   ShieldCheck,
@@ -154,9 +153,11 @@ export const ApplyPage: React.FC<ApplyPageProps> = ({
       {/* Centered white header with logo, green school name, grey "Online Admission System" */}
       <div className="bg-white border-b border-slate-200 py-6 px-4 shadow-xs">
         <div className="max-w-4xl mx-auto flex flex-col items-center text-center">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#16a34a] to-emerald-500 text-white flex items-center justify-center shadow-md mb-2">
-            <GraduationCap className="w-8 h-8" />
-          </div>
+          <img
+            src="/logo.jpeg"
+            alt={`${schoolConfig.name} Logo`}
+            className="w-14 h-14 rounded-2xl object-cover shadow-md mb-2"
+          />
 
           <h1 className="text-xl sm:text-2xl font-extrabold text-[#16a34a] tracking-tight">
             {schoolConfig.name}

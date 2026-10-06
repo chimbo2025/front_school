@@ -73,17 +73,17 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     },
   ];
 
-  const handlePay = (e: React.FormEvent) => {
+  const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
     if (amount <= 0) return;
 
     setIsProcessing(true);
-    setTimeout(() => {
+    try {
       const generatedRef = method === 'Bank'
         ? (bankReference || `BNK-${Math.floor(100000 + Math.random() * 900000)}`)
         : `${method.substring(0, 2).toUpperCase()}${Date.now().toString().slice(-6)}`;
 
-      addPayment({
+      await addPayment({
         studentId: student.id,
         amount,
         method,
@@ -97,7 +97,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       if (onSuccess) {
         onSuccess();
       }
-    }, 900);
+    } catch (err) {
+      setIsProcessing(false);
+      alert(err instanceof Error ? err.message : 'Payment failed');
+    }
   };
 
   const handleClose = () => {
@@ -229,7 +232,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               </div>
             ) : (
               <div className="space-y-2 bg-blue-50/60 p-3 rounded-lg border border-blue-100 text-xs">
-                <div className="font-semibold text-blue-900">Bright Future School Bank Accounts:</div>
+                <div className="font-semibold text-blue-900">{schoolConfig.name} Bank Accounts:</div>
                 <div className="text-blue-800 space-y-0.5">
                   <p>• People's Bank of Zanzibar (PBZ): <span className="font-mono font-semibold">0210084920</span></p>
                   <p>• CRDB Bank Zanzibar Branch: <span className="font-mono font-semibold">015029384910</span></p>

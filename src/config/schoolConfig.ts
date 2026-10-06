@@ -15,12 +15,12 @@ export interface SchoolConfig {
 }
 
 export const schoolConfig: SchoolConfig = {
-  name: "Bright Future School Zanzibar",
-  shortName: "Bright Future School",
+  name: "SEA COAST ACADEMY",
+  shortName: "SEA COAST ACADEMY",
   tagline: "Empowering Future Leaders",
   phone: "0778 407 818",
   altPhone: "0777 123 456",
-  email: "admissions@brightfuturezanzibar.sc.tz",
+  email: "admissions@seacoastacademy.sc.tz",
   location: "Chukwani Main Road",
   island: "Unguja, Zanzibar",
   country: "Tanzania",

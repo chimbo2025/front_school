@@ -22,16 +22,23 @@ import { AdminSidebar, AdminNavItem, AdminTab } from '../components/AdminSidebar
 import { AdminRegisterForm } from '../components/AdminRegisterForm';
 import { TablePagination } from '../components/TablePagination';
 
+import { LogOut, User as UserIcon } from 'lucide-react';
+import { User as UserType } from '../services/auth';
+
 interface AdminPageProps {
   onNavigate: (path: string) => void;
   onOpenFeesModal: () => void;
+  onLogout: () => void;
+  user: UserType | null;
 }
 
-export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenFeesModal }) => {
+export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenFeesModal, user, onLogout }) => {
   const { 
     grades, 
     students, 
     payments, 
+    loading,
+    error,
     addGrade, 
     updateStudentStatus,
     deleteStudent,
@@ -42,7 +49,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenFeesModa
     financeSummary,
     monthlyCollections,
     feeTypeBreakdown,
-    resetToSampleData
+    refetch
   } = useApp();
 
   const VALID_TABS: AdminTab[] = ['students', 'finance', 'grades', 'register'];
@@ -276,8 +283,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenFeesModa
   };
 
   const handleResetData = () => {
-    if (confirm('Reset application state back to original 3 grades, 12 students, 20 payments sample data?')) {
-      resetToSampleData();
+    if (confirm('Reset application state? This will re-seed data from backend.')) {
+      refetch();
     }
   };
 
@@ -301,6 +308,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenFeesModa
     onSelectTab: setActiveTab,
     onPreviewFees: onOpenFeesModal,
     onBackToSite: () => onNavigate('/'),
+    user,
+    onLogout,
   };
 
   return (
@@ -397,6 +406,28 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenFeesModa
         {/* Content */}
         <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
           <div className="mx-auto w-full max-w-[1400px]">
+            {loading && (
+              <div className="flex items-center justify-center min-h-[400px]">
+                <div className="text-center space-y-3">
+                  <div className="w-10 h-10 border-4 border-[#7c3aed] border-t-transparent rounded-full animate-spin mx-auto" />
+                  <p className="text-slate-600">Loading data from server...</p>
+                </div>
+              </div>
+            )}
+            {error && !loading && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+                <div className="flex items-center gap-2 text-red-700">
+                  <span className="text-xl">⚠</span>
+                  <span className="font-medium">{error}</span>
+                </div>
+                <button
+                  onClick={refetch}
+                  className="mt-2 px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
           
           {/* ================= TAB 1: APPLICATIONS & STUDENTS ================= */}
           {activeTab === 'students' && (

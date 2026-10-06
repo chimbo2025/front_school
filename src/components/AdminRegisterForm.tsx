@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatNumber, schoolConfig } from '../config/schoolConfig';
-import { Gender, Student } from '../types';
+import { Gender, Relationship, Student } from '../types';
 import { FeeStatement } from './FeeStatement';
 
 interface AdminRegisterFormProps {
@@ -44,6 +44,11 @@ const EMPTY_FORM = {
   parentName: '',
   parentPhone: '',
   parentAddress: '',
+  parentRelationship: 'Father' as Relationship,
+  parentNationalId: '',
+  emergencyContactName: '',
+  emergencyContactPhone: '',
+  emergencyContactRelationship: 'Guardian' as Relationship,
   gradeId: '',
   academicYear: schoolConfig.academicYears[0] || '2026/2027',
   previousSchool: '',
@@ -131,11 +136,19 @@ export const AdminRegisterForm: React.FC<AdminRegisterFormProps> = ({
     else if (!/^0\d{9}$/.test(phone)) next.parentPhone = 'Use 10 digits starting with 0 (e.g. 0778407818).';
 
     if (!form.parentAddress.trim()) next.parentAddress = 'Parent address is required.';
+
+    if (!form.parentNationalId.trim()) next.parentNationalId = 'Parent National ID or ZAN ID is required.';
+
+    const emergencyPhone = form.emergencyContactPhone.replace(/[\s-]/g, '');
+    if (!form.emergencyContactName.trim()) next.emergencyContactName = 'Emergency contact name is required.';
+    if (!emergencyPhone) next.emergencyContactPhone = 'Emergency contact phone is required.';
+    else if (!/^0\d{9}$/.test(emergencyPhone)) next.emergencyContactPhone = 'Use 10 digits starting with 0 (e.g. 0778407818).';
+
     if (!form.gradeId) next.gradeId = 'Select a classroom.';
     return next;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const nextErrors = validate();
     setErrors(nextErrors);
@@ -147,26 +160,38 @@ export const AdminRegisterForm: React.FC<AdminRegisterFormProps> = ({
       return;
     }
 
-    const created = addStudent({
-      firstName: form.firstName.trim(),
-      middleName: form.middleName.trim() || undefined,
-      lastName: form.lastName.trim(),
-      gender: form.gender,
-      dob: form.dob,
-      address: form.address.trim(),
-      parentName: form.parentName.trim(),
-      parentPhone: form.parentPhone.replace(/[\s-]/g, ''),
-      parentAddress: form.parentAddress.trim(),
-      gradeId: form.gradeId,
-      academicYear: form.academicYear,
-      previousSchool: form.previousSchool.trim() || undefined,
-      additionalInfo: form.additionalInfo.trim() || undefined,
-      notes: form.notes.trim() || undefined,
-      status: 'Pending',
-    });
+    try {
+      const created = await addStudent({
+        firstName: form.firstName.trim(),
+        middleName: form.middleName.trim() || undefined,
+        lastName: form.lastName.trim(),
+        gender: form.gender,
+        dob: form.dob,
+        address: form.address.trim(),
+        parentName: form.parentName.trim(),
+        parentPhone: form.parentPhone.replace(/[\s-]/g, ''),
+        parentAddress: form.parentAddress.trim(),
+        parentRelationship: form.parentRelationship,
+        parentNationalId: form.parentNationalId.trim(),
+        emergencyContactName: form.emergencyContactName.trim(),
+        emergencyContactPhone: form.emergencyContactPhone.replace(/[\s-]/g, ''),
+        emergencyContactRelationship: form.emergencyContactRelationship,
+        gradeId: form.gradeId,
+        academicYear: form.academicYear,
+        previousSchool: form.previousSchool.trim() || undefined,
+        additionalInfo: form.additionalInfo.trim() || undefined,
+        notes: form.notes.trim() || undefined,
+        status: 'Pending',
+      });
 
-    setSaved(created);
-    onSaved(created);
+      setSaved(created);
+      onSaved(created);
+    } catch (err) {
+      setErrors({ submit: err instanceof Error ? err.message : 'Failed to submit application' });
+      requestAnimationFrame(() => {
+        formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
   };
 
   const errorList = Object.entries(errors).filter(([, v]) => v);
@@ -218,7 +243,12 @@ export const AdminRegisterForm: React.FC<AdminRegisterFormProps> = ({
                 ['Gender', saved.gender],
                 ['Academic Year', saved.academicYear],
                 ['Parent / Guardian', saved.parentName],
+                ['Relationship', saved.parentRelationship],
+                ['National ID / ZAN ID', saved.parentNationalId],
                 ['Phone', saved.parentPhone],
+                ['Emergency Contact', saved.emergencyContactName],
+                ['Relationship', saved.emergencyContactRelationship],
+                ['Emergency Phone', saved.emergencyContactPhone],
               ].map(([k, v]) => (
                 <div key={k} className="flex items-baseline justify-between gap-3 border-b border-slate-100 pb-2">
                   <dt className="text-xs font-semibold text-slate-500">{k}</dt>
@@ -391,6 +421,41 @@ export const AdminRegisterForm: React.FC<AdminRegisterFormProps> = ({
             </div>
             <div>
               <label className={labelCls}>
+                Relationship to Student <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={form.parentRelationship}
+                onChange={(e) => set('parentRelationship', e.target.value)}
+                className={`${inputCls} cursor-pointer`}
+              >
+                {(['Father', 'Mother', 'Guardian', 'Grandparent', 'Sibling', 'Other'] as Relationship[]).map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>
+                National ID / ZAN ID <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={form.parentNationalId}
+                onChange={(e) => set('parentNationalId', e.target.value)}
+                placeholder="e.g. 1980123456789 or ZAN123456"
+                className={`${inputCls} ${errors.parentNationalId ? 'border-red-400 bg-red-50/50' : ''}`}
+              />
+              <ErrorText>{errors.parentNationalId}</ErrorText>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>
                 Mobile Number <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -424,6 +489,61 @@ export const AdminRegisterForm: React.FC<AdminRegisterFormProps> = ({
               }`}
             />
             <ErrorText>{errors.parentAddress}</ErrorText>
+          </div>
+        </SectionCard>
+
+        {/* Section 2b: Emergency Contact */}
+        <SectionCard step={2} icon={Phone} title="Emergency Contact" subtitle="Secondary contact in case parent/guardian is unreachable">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>
+                Full Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={form.emergencyContactName}
+                onChange={(e) => set('emergencyContactName', e.target.value)}
+                placeholder="e.g. Bi Fatuma Hassan"
+                className={`${inputCls} ${errors.emergencyContactName ? 'border-red-400 bg-red-50/50' : ''}`}
+              />
+              <ErrorText>{errors.emergencyContactName}</ErrorText>
+            </div>
+            <div>
+              <label className={labelCls}>
+                Relationship to Student <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={form.emergencyContactRelationship}
+                onChange={(e) => set('emergencyContactRelationship', e.target.value)}
+                className={`${inputCls} cursor-pointer`}
+              >
+                {(['Father', 'Mother', 'Guardian', 'Grandparent', 'Sibling', 'Other'] as Relationship[]).map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className={labelCls}>
+              Mobile Number <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="tel"
+                inputMode="numeric"
+                value={form.emergencyContactPhone}
+                onChange={(e) => set('emergencyContactPhone', e.target.value)}
+                placeholder="0778407818"
+                className={`${inputCls} pl-9 font-mono ${
+                  errors.emergencyContactPhone ? 'border-red-400 bg-red-50/50' : ''
+                }`}
+              />
+            </div>
+            <ErrorText>{errors.emergencyContactPhone}</ErrorText>
           </div>
         </SectionCard>
 

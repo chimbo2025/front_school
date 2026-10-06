@@ -24,6 +24,8 @@ export interface Grade {
   feeGroups: FeeGroup[];
 }
 
+export type Relationship = 'Father' | 'Mother' | 'Guardian' | 'Grandparent' | 'Sibling' | 'Other';
+
 export interface Student {
   id: string;
   applicationNo: string; // e.g. "BFS-2026-001"
@@ -36,6 +38,11 @@ export interface Student {
   parentName: string;
   parentPhone: string;
   parentAddress: string;
+  parentRelationship: Relationship;
+  parentNationalId: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+  emergencyContactRelationship: Relationship;
   gradeId: string;
   academicYear: string;
   previousSchool?: string;
