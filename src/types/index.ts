@@ -1,6 +1,6 @@
 export type Gender = 'Male' | 'Female';
 
-export type StudentStatus = 'Pending' | 'Paid' | 'Admitted';
+export type StudentStatus = 'Pending' | 'Partial' | 'Paid' | 'Admitted';
 
 export type PaymentMethod = 'M-Pesa' | 'Mixx by Yas' | 'Airtel Money' | 'Bank';
 
@@ -51,6 +51,8 @@ export interface Student {
   notes?: string;
   status: StudentStatus;
   createdAt: string;
+  /** Optional passport photo URL or base64 data URL */
+  photo?: string;
 }
 
 export interface Payment {

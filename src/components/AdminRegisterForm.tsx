@@ -54,6 +54,7 @@ const EMPTY_FORM = {
   previousSchool: '',
   additionalInfo: '',
   notes: '',
+  photo: '',
 };
 
 const labelCls = 'block text-xs font-semibold text-slate-700 mb-1';
@@ -181,6 +182,7 @@ export const AdminRegisterForm: React.FC<AdminRegisterFormProps> = ({
         previousSchool: form.previousSchool.trim() || undefined,
         additionalInfo: form.additionalInfo.trim() || undefined,
         notes: form.notes.trim() || undefined,
+        photo: form.photo || undefined,
         status: 'Pending',
       });
 
@@ -400,6 +402,44 @@ export const AdminRegisterForm: React.FC<AdminRegisterFormProps> = ({
               className={`${inputCls} ${errors.address ? 'border-red-400 bg-red-50/50' : ''}`}
             />
             <ErrorText>{errors.address}</ErrorText>
+          </div>
+
+          {/* Passport Photo (Optional) */}
+          <div>
+            <label className={labelCls}>
+              Passport Photo <span className="text-slate-400 text-xs font-normal">(Optional)</span>
+            </label>
+            <div className="flex items-center gap-4">
+              <div className="relative w-20 h-20 flex-shrink-0 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 overflow-hidden">
+                {form.photo ? (
+                  <img
+                    src={form.photo}
+                    alt="Student passport photo preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User className="w-8 h-8 mx-auto text-slate-300" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = () => set('photo', reader.result as string);
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className={`${inputCls} cursor-pointer`}
+                />
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Optional passport-size photo (JPG/PNG, max 2MB). Will be stored with student record.
+                </p>
+              </div>
+            </div>
           </div>
         </SectionCard>
 

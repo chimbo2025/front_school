@@ -65,8 +65,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
       id: 'lower',
       title: 'Lower Primary',
       grades: 'Grade 1 - Grade 2',
-      color: 'from-teal-600 to-emerald-600',
-      tagColor: 'bg-teal-50 text-teal-700 border-teal-200',
+      color: 'from-primary to-primary-hover',
+      tagColor: 'bg-primary-light text-primary border-primary/20',
       icon: BookOpen,
       desc: 'Nurturing foundational literacy, mathematical reasoning, Kiswahili fluency, and natural curiosity through hands-on exploration.',
       feePreview: 'From 1,925,000 Tsh / year',
@@ -75,8 +75,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
       id: 'middle',
       title: 'Middle Primary',
       grades: 'Grade 3 - Grade 4',
-      color: 'from-blue-600 to-sky-600',
-      tagColor: 'bg-blue-50 text-blue-700 border-blue-200',
+      color: 'from-primary to-primary-hover',
+      tagColor: 'bg-primary-light text-primary border-primary/20',
       icon: Laptop,
       desc: 'Expanding inquiry into science experiments, digital computing fundamentals, collaborative projects, and structured sports.',
       feePreview: 'From 2,200,000 Tsh / year',
@@ -85,8 +85,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
       id: 'upper',
       title: 'Upper Primary',
       grades: 'Grade 5 - Grade 7',
-      color: 'from-amber-600 to-orange-600',
-      tagColor: 'bg-amber-50 text-amber-700 border-amber-200',
+      color: 'from-primary to-primary-hover',
+      tagColor: 'bg-primary-light text-primary border-primary/20',
       icon: GraduationCap,
       desc: 'Rigorous academic preparation for national primary leaving examinations, student council leadership, and high school transitions.',
       feePreview: 'Comprehensive package',
@@ -95,8 +95,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
       id: 'stem',
       title: 'STEM & Creative Arts',
       grades: 'All Enrolled Grades',
-      color: 'from-purple-600 to-indigo-600',
-      tagColor: 'bg-purple-50 text-purple-700 border-purple-200',
+      color: 'from-primary to-primary-hover',
+      tagColor: 'bg-primary-light text-primary border-primary/20',
       icon: Palette,
       desc: 'Dedicated coding labs, robotics workshops, visual arts studios, and cultural choir building confident well-rounded global thinkers.',
       feePreview: 'Integrated enrichment',
@@ -181,23 +181,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 text-slate-800">
       {/* HERO SECTION - Inspired by the uploaded visual design */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#0f2e46] via-[#133e5e] to-[#1c5075] text-white pt-8 pb-16 sm:pb-24 lg:pt-14">
+      <section className="relative overflow-hidden bg-gradient-to-b from-navy via-[#0d2c44] to-primary text-white pt-8 pb-16 sm:pb-24 lg:pt-14">
         {/* Subtle background glow */}
-        <div className="absolute top-0 right-0 -mt-16 -mr-16 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 -mb-16 -ml-16 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 -mt-16 -mr-16 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 -mb-16 -ml-16 w-96 h-96 bg-brand/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* Left Column: Heading & CTAs */}
             <div className="lg:col-span-6 space-y-5 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-sm font-medium text-emerald-300">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-sm font-medium text-primary">
+                <Sparkles className="w-3.5 h-3.5 text-primary" />
                 <span>Admissions Open for Academic Year 2026/2027</span>
               </div>
 
               <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
                 EMPOWERING <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-200 to-sky-300">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary-light to-sky-300">
                   FUTURE LEADERS
                 </span>
               </h1>
@@ -212,7 +212,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
                 <button
                   onClick={() => onNavigate('/apply')}
-                  className="w-full sm:w-auto px-6 py-3.5 bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-semibold rounded-xl shadow-lg hover:shadow-purple-500/30 transition-all flex items-center justify-center gap-2 cursor-pointer text-base sm:text-lg group"
+                  className="w-full sm:w-auto px-6 py-3.5 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl shadow-lg hover:shadow-primary/30 transition-all flex items-center justify-center gap-2 cursor-pointer text-base sm:text-lg group"
                 >
                   <span>Apply Now</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -222,14 +222,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
                   onClick={onOpenFeesModal}
                   className="w-full sm:w-auto px-5 py-3.5 bg-white/10 hover:bg-white/20 text-white font-medium rounded-xl border border-white/20 backdrop-blur-xs transition-colors flex items-center justify-center gap-2 text-base sm:text-lg cursor-pointer"
                 >
-                  <FileText className="w-4 h-4 text-emerald-300" />
+                  <FileText className="w-4 h-4 text-primary" />
                   <span>View Fee Structure</span>
                 </button>
               </div>
 
               {/* Trust Subtitle */}
               <div className="pt-2 text-sm text-slate-300 flex items-center justify-center lg:justify-start gap-2">
-                <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                <CheckCircle className="w-4 h-4 text-primary shrink-0" />
                 <span>Places for Grade 1, 2 and 3 are still available. Apply early to secure a place.</span>
               </div>
             </div>
@@ -255,7 +255,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
                     </div>
                     <button
                       onClick={() => onNavigate('/apply')}
-                      className="px-3 py-1.5 bg-[#16a34a] hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold shadow-xs"
+                      className="px-3 py-1.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-semibold shadow-xs"
                     >
                       Start Application
                     </button>
@@ -276,9 +276,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
                     idx === 4 ? 'col-span-2 sm:col-span-1' : ''
                   }`}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-white/15 mx-auto flex items-center justify-center mb-2 text-emerald-300">
-                    <Icon className="w-4 h-4" />
-                  </div>
+<div className="w-8 h-8 rounded-lg bg-white/15 mx-auto flex items-center justify-center mb-2 text-primary">
+                      <Icon className="w-4 h-4" />
+                    </div>
                   <div className="text-xl sm:text-2xl font-extrabold tracking-tight font-mono">
                     {stat.value}
                   </div>
@@ -300,7 +300,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             <div className="lg:col-span-5 space-y-4">
-              <div className="text-sm font-bold uppercase tracking-wider text-[#16a34a]">
+              <div className="text-sm font-bold uppercase tracking-wider text-primary">
                 About Our School
               </div>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
@@ -314,20 +314,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
               </p>
               <div className="pt-2 flex flex-wrap gap-4 text-sm font-medium text-slate-700">
                 <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg">
-                  <CheckCircle className="w-4 h-4 text-[#16a34a]" /> Ministry of Education Registered
+                  <CheckCircle className="w-4 h-4 text-primary" /> Ministry of Education Registered
                 </span>
                 <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg">
-                  <CheckCircle className="w-4 h-4 text-[#16a34a]" /> Qualified Native & Bilingual Faculty
+                  <CheckCircle className="w-4 h-4 text-primary" /> Qualified Native & Bilingual Faculty
                 </span>
                 <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg">
-                  <CheckCircle className="w-4 h-4 text-[#16a34a]" /> Safe Dedicated School Bus Routes
+                  <CheckCircle className="w-4 h-4 text-primary" /> Safe Dedicated School Bus Routes
                 </span>
               </div>
             </div>
 
             <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="p-5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100/70 transition-colors">
-                <div className="w-10 h-10 rounded-lg bg-emerald-100 text-[#16a34a] flex items-center justify-center mb-3">
+                <div className="w-10 h-10 rounded-lg bg-primary-light text-primary flex items-center justify-center mb-3">
                   <GraduationCap className="w-5 h-5" />
                 </div>
                 <h3 className="text-base font-bold text-slate-900">Academic Rigor</h3>
@@ -337,7 +337,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
               </div>
 
               <div className="p-5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100/70 transition-colors">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mb-3">
+                <div className="w-10 h-10 rounded-lg bg-primary-light text-primary flex items-center justify-center mb-3">
                   <Laptop className="w-5 h-5" />
                 </div>
                 <h3 className="text-base font-bold text-slate-900">Digital Literacy</h3>
@@ -347,7 +347,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
               </div>
 
               <div className="p-5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100/70 transition-colors">
-                <div className="w-10 h-10 rounded-lg bg-purple-100 text-[#7c3aed] flex items-center justify-center mb-3">
+                <div className="w-10 h-10 rounded-lg bg-primary-light text-primary flex items-center justify-center mb-3">
                   <Trophy className="w-5 h-5" />
                 </div>
                 <h3 className="text-base font-bold text-slate-900">Sports & Life Skills</h3>
@@ -357,7 +357,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
               </div>
 
               <div className="p-5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100/70 transition-colors">
-                <div className="w-10 h-10 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center mb-3">
+                <div className="w-10 h-10 rounded-lg bg-primary-light text-primary flex items-center justify-center mb-3">
                   <Phone className="w-5 h-5" />
                 </div>
                 <h3 className="text-base font-bold text-slate-900">Parent Partnership</h3>
@@ -420,14 +420,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
                       <div className="mt-4 flex flex-col gap-2">
                         <button
                           onClick={() => onNavigate('/apply')}
-                          className="w-full py-2.5 px-3 bg-[#7c3aed] hover:bg-[#6d28d9] text-white rounded-lg text-sm font-semibold shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                          className="w-full py-2.5 px-3 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-semibold shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                         >
                           <span>Apply for {prog.title}</span>
                           <ArrowRight className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => scrollToFees()}
-                          className="w-full py-2 px-3 border border-slate-300 hover:border-slate-400 bg-white text-slate-700 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+                          className="w-full py-2 px-3 border border-border hover:bg-slate-50 bg-white text-slate-700 rounded-lg text-sm font-medium transition-colors cursor-pointer"
                         >
                           View Fee Breakdown
                         </button>
@@ -486,7 +486,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
                   <div className="pt-2 border-t border-slate-100 space-y-1">
                     {facility.features.map((feat, idx) => (
                       <div key={idx} className="flex items-center gap-1.5 text-sm text-slate-600">
-                        <CheckCircle className="w-3.5 h-3.5 text-[#16a34a] shrink-0" />
+                        <CheckCircle className="w-3.5 h-3.5 text-primary shrink-0" />
                         <span>{feat}</span>
                       </div>
                     ))}
@@ -540,7 +540,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
                 </div>
 
                 <div className="mt-5 pt-4 border-t border-slate-200/80 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-xl shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center text-xl shrink-0 text-primary">
                     {t.avatar}
                   </div>
                   <div>
@@ -559,7 +559,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-gradient-to-r from-[#114060] to-[#1d5c88] rounded-3xl p-6 sm:p-10 border border-white/15 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-2 text-center md:text-left">
-              <span className="text-sm font-semibold text-emerald-300 uppercase tracking-widest">
+              <span className="text-sm font-semibold text-primary uppercase tracking-widest">
                 Academic Year 2026/2027 Registration
               </span>
               <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
@@ -574,7 +574,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
             <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
               <button
                 onClick={() => onNavigate('/apply')}
-                className="w-full sm:w-auto px-7 py-3.5 bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer text-base sm:text-lg"
+                className="w-full sm:w-auto px-7 py-3.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl shadow-lg shadow-primary/30 transition-all flex items-center justify-center gap-2 cursor-pointer text-base sm:text-lg"
               >
                 <span>APPLY NOW</span>
                 <ArrowRight className="w-4 h-4" />
@@ -597,7 +597,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
             {/* Col 1 & 2: School info */}
             <div className="lg:col-span-2 space-y-4">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-lg bg-[#16a34a] text-white flex items-center justify-center">
+                <div className="w-9 h-9 rounded-lg bg-primary text-white flex items-center justify-center">
                   <GraduationCap className="w-5 h-5" />
                 </div>
                 <span className="font-bold text-white text-lg">
@@ -609,17 +609,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
               </p>
               <div className="space-y-1.5 text-sm text-slate-300">
                 <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <MapPin className="w-4 h-4 text-primary shrink-0" />
                   <span>{schoolConfig.location}, {schoolConfig.island}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <Phone className="w-4 h-4 text-primary shrink-0" />
                   <a href={`tel:${schoolConfig.phone.replace(/\s+/g, '')}`} className="hover:text-white underline">
                     {schoolConfig.phone}
                   </a>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <Mail className="w-4 h-4 text-primary shrink-0" />
                   <a href={`mailto:${schoolConfig.email}`} className="hover:text-white underline">
                     {schoolConfig.email}
                   </a>
@@ -718,7 +718,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
                       <div className="text-sm font-semibold text-slate-700">Facility Highlights:</div>
                       {fac.features.map((f, i) => (
                         <div key={i} className="text-sm text-slate-600 flex items-center gap-1.5">
-                          <CheckCircle className="w-3.5 h-3.5 text-[#16a34a]" />
+                          <CheckCircle className="w-3.5 h-3.5 text-primary" />
                           <span>{f}</span>
                         </div>
                       ))}
@@ -729,7 +729,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
                           setActiveFacilityModal(null);
                           onNavigate('/apply');
                         }}
-                        className="w-full py-2.5 bg-[#7c3aed] text-white rounded-lg text-sm font-semibold hover:bg-[#6d28d9]"
+                        className="w-full py-2.5 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary-hover"
                       >
                         Apply for Admission Today
                       </button>

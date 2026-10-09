@@ -49,6 +49,7 @@ export const StudentDetailPage: React.FC<StudentDetailPageProps> = ({
     getStudentTotalFees, 
     getStudentPaidAmount, 
     getStudentBalance,
+    getStudentComputedStatus,
     updateStudentStatus,
     students,
     grades,
@@ -84,16 +85,24 @@ export const StudentDetailPage: React.FC<StudentDetailPageProps> = ({
   const totalFees = getStudentTotalFees(student.id);
   const paidAmount = getStudentPaidAmount(student.id);
   const balance = getStudentBalance(student.id);
+  const computedStatus = getStudentComputedStatus(student.id);
 
-  // Status computation for visual tags
-  let statusBadgeColor = 'bg-red-50 text-red-700 border-red-200';
-  if (student.status === 'Admitted') {
-    statusBadgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  } else if (student.status === 'Paid') {
-    statusBadgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  } else if (paidAmount > 0 && balance > 0) {
-    statusBadgeColor = 'bg-amber-50 text-amber-700 border-amber-200';
-  }
+  const getStatusConfig = (status: StudentStatus) => {
+    switch (status) {
+      case 'Admitted':
+        return { color: 'bg-purple-50 text-purple-700 border-purple-200', icon: CheckCircle2, iconColor: 'text-purple-600', label: 'Admitted' };
+      case 'Paid':
+        return { color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: FileCheck, iconColor: 'text-emerald-600', label: 'Paid' };
+      case 'Partial':
+        return { color: 'bg-blue-50 text-blue-700 border-blue-200', icon: CreditCard, iconColor: 'text-blue-600', label: 'Partial' };
+      case 'Pending':
+      default:
+        return { color: 'bg-amber-50 text-amber-700 border-amber-200', icon: Clock, iconColor: 'text-amber-600', label: 'Pending' };
+    }
+  };
+
+  const statusConfig = getStatusConfig(computedStatus);
+  const storedStatusConfig = getStatusConfig(student.status);
 
   const navItems: AdminNavItem[] = [
     {
@@ -206,18 +215,36 @@ export const StudentDetailPage: React.FC<StudentDetailPageProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Quick Status updater */}
-            <select
-              value={student.status}
-              onChange={async (e) => {
-                await updateStudentStatus(student.id, e.target.value as StudentStatus);
-              }}
-              className="px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-[#7c3aed]"
-            >
-              <option value="Pending">Status: Pending</option>
-              <option value="Paid">Status: Paid</option>
-              <option value="Admitted">Status: Admitted</option>
-            </select>
+            {/* Smart Status Display */}
+            <div className="relative">
+              <select
+                value={computedStatus}
+                onChange={async (e) => {
+                  const newStatus = e.target.value as StudentStatus;
+                  // Only allow manual override to "Admitted" and only if balance is 0
+                  if (newStatus === 'Admitted') {
+                    if (balance > 0) {
+                      if (!window.confirm(`Admit student with outstanding balance of ${formatTsh(balance)}? This is not recommended.`)) {
+                        return;
+                      }
+                    }
+                    await updateStudentStatus(student.id, 'Admitted');
+                  }
+                }}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium focus:ring-2 focus:ring-[#7c3aed] ${computedStatus === 'Admitted' ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-slate-50 border-slate-300 text-slate-700 cursor-not-allowed'}`}
+                disabled={computedStatus !== 'Admitted'}
+              >
+                <option value="Pending" disabled>Status: Pending (auto)</option>
+                <option value="Partial" disabled>Status: Partial (auto)</option>
+                <option value="Paid" disabled>Status: Paid (auto)</option>
+                <option value="Admitted">Status: Admitted {balance > 0 ? '⚠' : '✓'}</option>
+              </select>
+              {computedStatus !== 'Admitted' && (
+                <span className="absolute -top-5 right-0 text-[10px] text-slate-400 whitespace-nowrap">
+                  Auto-computed
+                </span>
+              )}
+            </div>
 
             <button
               onClick={() => setIsRecordPaymentOpen(true)}
@@ -234,16 +261,23 @@ export const StudentDetailPage: React.FC<StudentDetailPageProps> = ({
         {/* Student Profile Card */}
         <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-emerald-100 text-[#16a34a] font-extrabold text-xl sm:text-2xl flex items-center justify-center shrink-0 border border-emerald-200 shadow-2xs">
-              {student.firstName.charAt(0)}{student.lastName.charAt(0)}
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-emerald-100 text-[#16a34a] font-extrabold text-xl sm:text-2xl flex items-center justify-center shrink-0 border border-emerald-200 shadow-2xs overflow-hidden">
+              {student.photo ? (
+                <img src={student.photo} alt={`${student.firstName} ${student.lastName} passport photo`} className="w-full h-full object-cover" />
+              ) : (
+                student.firstName.charAt(0) + student.lastName.charAt(0)
+              )}
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
                   {student.firstName} {student.middleName ? `${student.middleName} ` : ''}{student.lastName}
                 </h1>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${statusBadgeColor}`}>
-                  {student.status.toUpperCase()}
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${statusConfig.color}`}>
+                  {statusConfig.label}
+                  {computedStatus !== student.status && (
+                    <span className="ml-1 opacity-70">(stored: {storedStatusConfig.label})</span>
+                  )}
                 </span>
               </div>
               <div className="text-xs text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
@@ -317,13 +351,16 @@ export const StudentDetailPage: React.FC<StudentDetailPageProps> = ({
               Admission Status
             </div>
             <div className="text-base sm:text-lg font-bold text-slate-900 mt-1 flex items-center gap-1.5">
-              {student.status === 'Admitted' && <CheckCircle2 className="w-5 h-5 text-emerald-600" />}
-              {student.status === 'Paid' && <Receipt className="w-5 h-5 text-emerald-600" />}
-              {student.status === 'Pending' && <Clock className="w-5 h-5 text-amber-600" />}
-              <span>{student.status}</span>
+              {statusConfig.icon && <statusConfig.icon className={`w-5 h-5 ${statusConfig.iconColor}`} />}
+              <span>{statusConfig.label}</span>
+              {computedStatus !== student.status && (
+                <span className="text-xs text-slate-400 ml-1">(stored: {storedStatusConfig.label})</span>
+              )}
             </div>
             <div className="text-[11px] text-slate-400 mt-0.5">
-              Registered on {new Date(student.createdAt).toLocaleDateString()}
+              {computedStatus === 'Admitted' 
+                ? `Admitted on ${new Date(student.createdAt).toLocaleDateString()}` 
+                : `Registered on ${new Date(student.createdAt).toLocaleDateString()}`}
             </div>
           </div>
         </div>

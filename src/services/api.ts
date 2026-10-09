@@ -1,17 +1,26 @@
-import { authService } from './auth';
+import { authenticatedFetch } from './auth';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+async function fetchJson<T>(
+  url: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const res = await authenticatedFetch(url, options);
 
-async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
-  const authHeader = authService.getAuthHeader();
-  const res = await fetch(`${API_BASE}${url}`, {
-    headers: { 'Content-Type': 'application/json', ...authHeader, ...options?.headers },
-    ...options,
-  });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || res.statusText || 'Request failed');
+
+    throw new Error(
+      err.detail ||
+      err.message ||
+      res.statusText ||
+      'Request failed'
+    );
   }
+
+  if (res.status === 204) {
+    return undefined as T;
+  }
+
   return res.json();
 }
 
@@ -37,7 +46,7 @@ export interface Grade {
 }
 
 export type Gender = 'Male' | 'Female';
-export type StudentStatus = 'Pending' | 'Paid' | 'Admitted';
+export type StudentStatus = 'Pending' | 'Partial' | 'Paid' | 'Admitted';
 export type PaymentMethod = 'M-Pesa' | 'Mixx by Yas' | 'Airtel Money' | 'Bank';
 export type Relationship = 'Father' | 'Mother' | 'Guardian' | 'Grandparent' | 'Sibling' | 'Other';
 
@@ -71,6 +80,8 @@ export interface Student {
   payments: Payment[];
   created_at: string;
   updated_at: string;
+  /** Optional passport photo URL */
+  photo?: string;
 }
 
 export interface StudentListItem {
@@ -134,6 +145,9 @@ export const api = {
   grades: {
     list: () => fetchJson<{ results: Grade[]; count: number }>('/grades/'),
     get: (id: string) => fetchJson<Grade>(`/grades/${id}/`),
+    create: (data: Record<string, unknown>) => fetchJson<Grade>('/grades/', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Record<string, unknown>) => fetchJson<Grade>(`/grades/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) => fetchJson<void>(`/grades/${id}/`, { method: 'DELETE' }),
   },
   students: {
     list: (params?: Record<string, string>) => {

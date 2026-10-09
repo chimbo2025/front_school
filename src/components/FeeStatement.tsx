@@ -9,8 +9,8 @@ interface FeeStatementProps {
 
 export const FeeStatement: React.FC<FeeStatementProps> = ({ grade, className = '' }) => {
   // Calculate group subtotals and grand total
-  const groupsWithSubtotals = grade.feeGroups.map((group) => {
-    const subtotal = group.items.reduce((sum, item) => sum + (item.amount || 0), 0);
+  const groupsWithSubtotals = (grade.feeGroups || []).map((group) => {
+    const subtotal = (group.items || []).reduce((sum, item) => sum + (item.amount || 0), 0);
     return {
       ...group,
       subtotal,
@@ -32,7 +32,7 @@ export const FeeStatement: React.FC<FeeStatementProps> = ({ grade, className = '
       </div>
 
       <div className="p-3 sm:p-4 space-y-3">
-        {groupsWithSubtotals.map((group) => (
+        {(groupsWithSubtotals || []).map((group) => (
           <div key={group.id} className="border-b border-slate-100 pb-2.5 last:border-b-0">
             {/* Small grey uppercase group title */}
             <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
@@ -41,7 +41,7 @@ export const FeeStatement: React.FC<FeeStatementProps> = ({ grade, className = '
 
             {/* Rows with item name and amount */}
             <div className="space-y-1">
-              {group.items.map((item) => (
+              {(group.items || []).map((item) => (
                 <div key={item.id} className="flex justify-between items-center text-sm text-slate-800">
                   <span className="font-normal text-slate-700">{item.label}</span>
                   <span className="font-mono text-slate-800 tabular-nums">{formatNumber(item.amount)}</span>

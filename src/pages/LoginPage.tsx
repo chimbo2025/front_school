@@ -37,7 +37,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigate }) => 
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-primary-light flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* School Logo & Header */}
         <div className="text-center mb-8">
@@ -46,7 +46,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigate }) => 
             alt={`${schoolConfig.name} Logo`}
             className="w-20 h-20 mx-auto mb-4 rounded-2xl object-cover shadow-lg"
           />
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#16a34a] tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-navy tracking-tight">
             {schoolConfig.name}
           </h1>
           <p className="text-sm text-slate-500 mt-1">
@@ -87,7 +87,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigate }) => 
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Enter your username"
-                    className="w-full px-3.5 py-2.5 pl-10 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-[#7c3aed]/40 focus:border-[#7c3aed]"
+                    className="w-full px-3.5 py-2.5 pl-10 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                   />
                   <ShieldCheck className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                 </div>
@@ -105,7 +105,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigate }) => 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="w-full px-3.5 py-2.5 pl-10 pr-10 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-[#7c3aed]/40 focus:border-[#7c3aed]"
+                    className="w-full px-3.5 py-2.5 pl-10 pr-10 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                   />
                   <button
                     type="button"
@@ -121,7 +121,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigate }) => 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 px-4 bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-bold rounded-lg text-sm shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-[#7c3aed]/40 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-4 bg-primary hover:bg-primary-hover text-white font-bold rounded-lg text-sm shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
@@ -139,7 +139,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigate }) => 
 
             <div className="pt-4 border-t border-slate-100">
               <p className="text-xs text-slate-500 text-center">
-                Demo credentials: <code className="bg-slate-100 px-1.5 py-0.5 rounded font-mono text-[#7c3aed]">admin</code> / <code className="bg-slate-100 px-1.5 py-0.5 rounded font-mono text-[#7c3aed]">admin123</code>
+                Demo credentials: <code className="bg-slate-100 px-1.5 py-0.5 rounded font-mono text-primary">admin</code> / <code className="bg-slate-100 px-1.5 py-0.5 rounded font-mono text-primary">admin123</code>
               </p>
             </div>
           </div>

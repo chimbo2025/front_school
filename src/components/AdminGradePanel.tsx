@@ -6,6 +6,7 @@ import {
   Trash2,
   UserPlus,
   Users,
+  AlertCircle,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatNumber } from '../config/schoolConfig';
@@ -26,7 +27,7 @@ export const AdminGradePanel: React.FC<AdminGradePanelProps> = ({
   onRegisterInGrade,
   onViewStudents,
 }) => {
-  const { updateGrade, students } = useApp();
+  const { updateGrade, deleteGrade, students } = useApp();
 
   const enrolled = students.filter((s) => s.gradeId === grade.id);
   const grandTotal = grade.feeGroups.reduce(
@@ -107,8 +108,8 @@ export const AdminGradePanel: React.FC<AdminGradePanelProps> = ({
         </h4>
 
         <div className="space-y-3">
-          {grade.feeGroups.map((group, gi) => {
-            const subtotal = group.items.reduce((s, i) => s + (i.amount || 0), 0);
+          {(grade.feeGroups || []).map((group, gi) => {
+            const subtotal = (group.items || []).reduce((s, i) => s + (i.amount || 0), 0);
             return (
               <div key={group.id} className="rounded-xl border border-slate-200 bg-white overflow-hidden">
                 <div className="flex items-center gap-2 bg-slate-50 border-b border-slate-200 px-3 py-2">
@@ -132,7 +133,7 @@ export const AdminGradePanel: React.FC<AdminGradePanelProps> = ({
                 </div>
 
                 <div className="divide-y divide-slate-100">
-                  {group.items.map((item, ii) => (
+                  {(group.items || []).map((item, ii) => (
                     <div key={item.id} className="flex items-center gap-2 px-3 py-2">
                       <input
                         value={item.label}
@@ -228,6 +229,30 @@ export const AdminGradePanel: React.FC<AdminGradePanelProps> = ({
           >
             <UserPlus className="h-3.5 w-3.5" />
             <span>Register in {grade.name}</span>
+          </button>
+          <button
+            onClick={async () => {
+              const enrolledCount = enrolled.length;
+              let confirmMessage = `Delete "${grade.name}" grade and its fee structure?`;
+              if (enrolledCount > 0) {
+                confirmMessage = `Cannot delete "${grade.name}": ${enrolledCount} student(s) enrolled. Reassign them first.`;
+                alert(confirmMessage);
+                return;
+              }
+              if (window.confirm(confirmMessage)) {
+                try {
+                  await deleteGrade(grade.id);
+                } catch (err) {
+                  alert(err instanceof Error ? err.message : 'Failed to delete grade');
+                }
+              }
+            }}
+            className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-red-50 text-red-600 border border-red-200 text-xs font-semibold transition-colors hover:bg-red-100"
+            disabled={enrolled.length > 0}
+            title={enrolled.length > 0 ? `${enrolled.length} student(s) enrolled - cannot delete` : 'Delete this grade'}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            <span>Delete Grade</span>
           </button>
         </div>
       </div>

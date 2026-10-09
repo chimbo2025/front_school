@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
-import { Menu, X, Shield, Phone, ArrowRight, ExternalLink, LogOut, User as UserIcon } from 'lucide-react';
+import { Menu, X, Shield, Phone, ArrowRight, ExternalLink, LogOut, User as UserIcon, LayoutDashboard } from 'lucide-react';
 import { schoolConfig } from '../config/schoolConfig';
-import { authService, User } from '../services/auth';
+import { authService, User, triggerAuthLogout } from '../services/auth';
 
 interface NavbarProps {
   currentPath: string;
   onNavigate: (path: string) => void;
   onOpenFeesModal: () => void;
   user: User | null;
-  onLogout: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onOpenFeesModal, user, onLogout }) => {
+export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onOpenFeesModal, user }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleNavClick = (path: string) => {
@@ -33,8 +32,14 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onOpenF
     }
   };
 
+  const handleLogout = () => {
+    authService.clear();
+    triggerAuthLogout();
+    onNavigate('/');
+  };
+
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-border shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20">
           {/* Zone 1: Single text element wordmark + crest */}
@@ -49,7 +54,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onOpenF
                 className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl object-cover shadow-md group-hover:scale-105 transition-transform"
               />
               <div className="flex flex-col">
-                <span className="font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-tight">
+                <span className="font-bold text-navy text-sm sm:text-base tracking-tight leading-tight">
                   {schoolConfig.name}
                 </span>
                 <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
@@ -63,45 +68,45 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onOpenF
           <nav className="hidden lg:flex items-center gap-7 text-sm font-medium text-slate-600">
             <button
               onClick={() => handleNavClick('/')}
-              className={`hover:text-emerald-700 transition-colors cursor-pointer ${
-                currentPath === '/' ? 'text-[#16a34a] font-semibold' : ''
+              className={`hover:text-primary transition-colors cursor-pointer ${
+                currentPath === '/' ? 'text-primary font-semibold' : ''
               }`}
             >
               Home
             </button>
             <button
               onClick={() => handleScrollTo('about')}
-              className="hover:text-emerald-700 transition-colors cursor-pointer"
+              className="hover:text-primary transition-colors cursor-pointer"
             >
               About
             </button>
             <button
               onClick={() => handleScrollTo('programs')}
-              className="hover:text-emerald-700 transition-colors cursor-pointer"
+              className="hover:text-primary transition-colors cursor-pointer"
             >
               Grades
             </button>
             <button
               onClick={onOpenFeesModal}
-              className="hover:text-purple-700 transition-colors cursor-pointer"
+              className="hover:text-primary transition-colors cursor-pointer"
             >
               Fee Structure
             </button>
             <button
               onClick={() => handleScrollTo('how-it-works')}
-              className="hover:text-emerald-700 transition-colors cursor-pointer"
+              className="hover:text-primary transition-colors cursor-pointer"
             >
               How It Works
             </button>
             <button
               onClick={() => handleScrollTo('campus')}
-              className="hover:text-emerald-700 transition-colors cursor-pointer"
+              className="hover:text-primary transition-colors cursor-pointer"
             >
               Campus
             </button>
             <button
               onClick={() => handleScrollTo('contact')}
-              className="hover:text-emerald-700 transition-colors cursor-pointer"
+              className="hover:text-primary transition-colors cursor-pointer"
             >
               Contact
             </button>
@@ -110,38 +115,29 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onOpenF
           {/* Zone 3: 1-2 primary actions */}
           <div className="hidden sm:flex items-center gap-3">
             {user ? (
-              <div className="relative group">
+              <div className="flex items-center gap-2">
                 <button
-                  className="px-3 py-2 text-xs font-semibold rounded-lg border transition-colors flex items-center gap-1.5 cursor-pointer text-slate-700 border-slate-300 hover:bg-slate-100"
-                  aria-expanded="false"
-                  aria-haspopup="true"
+                  onClick={() => onNavigate('/admin')}
+                  className="px-3 py-2 text-xs font-semibold rounded-lg bg-primary text-white hover:bg-primary-hover transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                 >
-                  <UserIcon className="w-3.5 h-3.5 text-slate-500" />
-                  <span>{user.first_name || user.username}</span>
+                  <LayoutDashboard className="w-3.5 h-3.5" />
+                  <span>Go to Dashboard</span>
                 </button>
-                <div className="absolute right-0 top-full mt-1 w-40 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                  <div className="bg-white rounded-lg border border-slate-200 shadow-lg overflow-hidden">
-                    <div className="px-3 py-2 border-b border-slate-100">
-                      <p className="text-xs font-semibold text-slate-900">{user.first_name} {user.last_name}</p>
-                      <p className="text-[10px] text-slate-500">{user.username}</p>
-                    </div>
-                    <button
-                      onClick={onLogout}
-                      className="w-full px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2"
-                    >
-                      <LogOut className="w-3.5 h-3.5" />
-                      Sign Out
-                    </button>
-                  </div>
-                </div>
+                <button
+                  onClick={handleLogout}
+                  className="px-3 py-2 text-xs font-semibold rounded-lg border border-border text-slate-700 hover:bg-slate-100 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Sign Out</span>
+                </button>
               </div>
             ) : (
               <button
                 onClick={() => handleNavClick('/login')}
                 className={`px-3 py-2 text-xs font-semibold rounded-lg border transition-colors flex items-center gap-1.5 cursor-pointer ${
                   currentPath.startsWith('/admin') || currentPath === '/login'
-                    ? 'bg-slate-900 text-white border-slate-900'
-                    : 'text-slate-700 border-slate-300 hover:bg-slate-100'
+                    ? 'bg-primary text-white border-primary'
+                    : 'text-slate-700 border-border hover:bg-primary-light'
                 }`}
                 title="Enter administrative portal"
               >
@@ -152,7 +148,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onOpenF
 
             <button
               onClick={() => handleNavClick('/apply')}
-              className="px-4 py-2 text-xs font-semibold text-white bg-[#7c3aed] hover:bg-[#6d28d9] rounded-lg shadow-sm hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+              className="px-4 py-2 text-xs font-semibold text-white bg-primary hover:bg-primary-hover rounded-lg shadow-sm hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
             >
               <span>Apply Now</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -163,7 +159,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onOpenF
           <div className="flex sm:hidden items-center gap-2">
             <button
               onClick={() => handleNavClick('/apply')}
-              className="px-3 py-1.5 text-xs font-semibold text-white bg-[#7c3aed] rounded-lg shadow-xs cursor-pointer"
+              className="px-3 py-1.5 text-xs font-semibold text-white bg-primary rounded-lg shadow-xs cursor-pointer"
             >
               Apply
             </button>
@@ -180,8 +176,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onOpenF
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="sm:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-3 shadow-lg animate-in slide-in-from-top-2">
-          <div className="grid grid-cols-2 gap-2 pb-2 border-b border-slate-100">
+        <div className="sm:hidden border-t border-border bg-white px-4 pt-3 pb-6 space-y-3 shadow-lg animate-in slide-in-from-top-2">
+          <div className="grid grid-cols-2 gap-2 pb-2 border-b border-border">
             <button
               onClick={() => handleNavClick('/')}
               className="px-3 py-2.5 text-left text-sm font-medium rounded-lg hover:bg-slate-50 text-slate-800"
@@ -205,7 +201,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onOpenF
                 setMobileMenuOpen(false);
                 onOpenFeesModal();
               }}
-              className="px-3 py-2.5 text-left text-sm font-medium rounded-lg hover:bg-slate-50 text-purple-700 font-semibold"
+              className="px-3 py-2.5 text-left text-sm font-medium rounded-lg hover:bg-slate-50 text-primary font-semibold"
             >
               Fee Structure
             </button>
@@ -226,7 +222,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onOpenF
           <div className="space-y-2 pt-1">
             <button
               onClick={() => handleNavClick('/apply')}
-              className="w-full py-3 px-4 bg-[#7c3aed] text-white font-semibold rounded-lg text-sm flex items-center justify-center gap-2 shadow-sm"
+              className="w-full py-3 px-4 bg-primary text-white font-semibold rounded-lg text-sm flex items-center justify-center gap-2 shadow-sm"
             >
               <span>Apply Now</span>
               <ArrowRight className="w-4 h-4" />
@@ -241,18 +237,27 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onOpenF
                     <p className="text-[10px] text-slate-500">{user.username}</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => { onLogout(); setMobileMenuOpen(false); }}
-                  className="w-full py-2.5 px-4 bg-red-50 text-red-600 font-medium rounded-lg text-xs flex items-center justify-center gap-2 border border-red-200"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>Sign Out</span>
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { onNavigate('/admin'); setMobileMenuOpen(false); }}
+                    className="flex-1 py-2.5 px-4 bg-primary text-white font-medium rounded-lg text-xs flex items-center justify-center gap-2"
+                  >
+                    <LayoutDashboard className="w-3.5 h-3.5" />
+                    <span>Go to Dashboard</span>
+                  </button>
+                  <button
+                    onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                    className="flex-1 py-2.5 px-4 bg-red-50 text-danger font-medium rounded-lg text-xs flex items-center justify-center gap-2 border border-danger/30"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
               </div>
             ) : (
               <button
                 onClick={() => { handleNavClick('/login'); setMobileMenuOpen(false); }}
-                className="w-full py-2.5 px-4 bg-slate-900 text-white font-medium rounded-lg text-xs flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-4 bg-primary text-white font-medium rounded-lg text-xs flex items-center justify-center gap-2"
               >
                 <Shield className="w-3.5 h-3.5" />
                 <span>Admin Staff Portal</span>
@@ -263,7 +268,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onOpenF
               href={`tel:${schoolConfig.phone.replace(/\s+/g, '')}`}
               className="flex items-center justify-center gap-1.5 text-xs text-slate-600 pt-1"
             >
-              <Phone className="w-3.5 h-3.5 text-emerald-600" />
+              <Phone className="w-3.5 h-3.5 text-primary" />
               <span>Helpline: {schoolConfig.phone}</span>
             </a>
           </div>

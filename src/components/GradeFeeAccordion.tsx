@@ -52,13 +52,13 @@ const DEFAULT_COLUMNS: AccordionColumn[] = [
 ];
 
 const totalOf = (grade: Grade) =>
-  grade.feeGroups.reduce(
-    (sum, group) => sum + group.items.reduce((s, item) => s + (item.amount || 0), 0),
+  (grade.feeGroups || []).reduce(
+    (sum, group) => sum + (group.items || []).reduce((s, item) => s + (item.amount || 0), 0),
     0
   );
 
 const countItems = (grade: Grade) =>
-  grade.feeGroups.reduce((sum, group) => sum + group.items.length, 0);
+  (grade.feeGroups || []).reduce((sum, group) => sum + (group.items || []).length, 0);
 
 export const GradeFeeAccordion: React.FC<GradeFeeAccordionProps> = ({
   grades,
@@ -271,8 +271,8 @@ export const GradeFeeAccordion: React.FC<GradeFeeAccordionProps> = ({
 
                     {/* Fee groups */}
                     <div className="mt-3 space-y-3">
-                      {grade.feeGroups.map((group) => {
-                        const subtotal = group.items.reduce(
+                      {(grade.feeGroups || []).map((group) => {
+                        const subtotal = (group.items || []).reduce(
                           (sum, item) => sum + (item.amount || 0),
                           0
                         );
@@ -290,7 +290,7 @@ export const GradeFeeAccordion: React.FC<GradeFeeAccordionProps> = ({
                               </span>
                             </div>
                             <div className="divide-y divide-slate-100">
-                              {group.items.map((item) => (
+                              {(group.items || []).map((item) => (
                                 <div
                                   key={item.id}
                                   className="px-3 py-2 flex items-center justify-between gap-3 text-sm sm:text-base"

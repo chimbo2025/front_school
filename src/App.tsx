@@ -7,7 +7,7 @@ import { ApplyPage } from './pages/ApplyPage';
 import { AdminPage } from './pages/AdminPage';
 import { StudentDetailPage } from './pages/StudentDetailPage';
 import { LoginPage } from './pages/LoginPage';
-import { authService, User } from './services/auth';
+import { authService, User, onAuthLogout, triggerAuthLogout } from './services/auth';
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState<string>(() => {
@@ -39,18 +39,25 @@ export default function App() {
     initAuth();
   }, []);
 
-  const handleLogin = useCallback((userData: User) => {
+  // Listen for auth logout events (triggered by token refresh failure or idle timeout)
+  useEffect(() => {
+    const handleAuthLogout = () => {
+      authService.clear();
+      setUser(null);
+      navigate('/login');
+    };
+    return onAuthLogout(handleAuthLogout);
+  }, []);
+const handleLogin = useCallback((userData: User) => {
     setUser(userData);
   }, []);
 
   const handleLogout = useCallback(() => {
     authService.clear();
-    setUser(null);
-    setCurrentPath('/');
-    if (typeof window !== 'undefined') {
-      window.history.pushState({}, '', '/');
-    }
+    triggerAuthLogout();
+    navigate('/login');
   }, []);
+
 
   // Sync state with browser history
   useEffect(() => {
@@ -78,9 +85,8 @@ export default function App() {
 
     // Protected routes - redirect to login if not authenticated
     const isAdminRoute = currentPath.startsWith('/admin');
-    const isApplyRoute = currentPath === '/apply';
 
-    if ((isAdminRoute || isApplyRoute) && !user) {
+    if (isAdminRoute && !user) {
       // Store intended destination and redirect to login
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('redirectAfterLogin', currentPath);
@@ -154,7 +160,6 @@ export default function App() {
             onNavigate={navigate}
             onOpenFeesModal={() => setIsFeeModalOpen(true)}
             user={user}
-            onLogout={handleLogout}
           />
         )}
 

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Grade, Student, Payment, StudentStatus, PaymentMethod, FinanceSummary, Relationship, FeeItem, FeeGroup } from '../types';
 import { api, Grade as ApiGrade, Student as ApiStudent, StudentListItem, Payment as ApiPayment } from '../services/api';
+import { authService } from '../services/auth';
 
 interface AppContextType {
   grades: Grade[];
@@ -15,6 +16,7 @@ interface AppContextType {
   addPayment: (payment: Omit<Payment, 'id'>) => Promise<Payment>;
   addGrade: (grade: Omit<Grade, 'id'>) => Promise<Grade>;
   updateGrade: (id: string, data: Partial<Grade>) => Promise<void>;
+  deleteGrade: (id: string) => Promise<void>;
   getGradeById: (id: string) => Grade | undefined;
   getGradeTotalFees: (grade: Grade) => number;
   getStudentById: (id: string) => Student | undefined;
@@ -22,6 +24,7 @@ interface AppContextType {
   getStudentTotalFees: (studentId: string) => number;
   getStudentPaidAmount: (studentId: string) => number;
   getStudentBalance: (studentId: string) => number;
+  getStudentComputedStatus: (studentId: string) => StudentStatus;
   financeSummary: FinanceSummary;
   monthlyCollections: { month: string; amount: number }[];
   feeTypeBreakdown: { name: string; amount: number; percentage: number; color: string }[];
@@ -36,10 +39,10 @@ function mapApiGrade(g: ApiGrade): Grade {
     name: g.name,
     description: g.description,
     ageRange: g.age_range,
-    feeGroups: g.fee_groups.map(fg => ({
+    feeGroups: (g.fee_groups || []).map(fg => ({
       id: fg.id,
       name: fg.name,
-      items: fg.items.map(i => ({ id: i.id, label: i.label, amount: i.amount }))
+      items: (fg.items || []).map(i => ({ id: i.id, label: i.label, amount: i.amount }))
     }))
   };
 }
@@ -69,6 +72,7 @@ function mapApiStudent(s: ApiStudent | StudentListItem): Student {
     notes: 'notes' in s ? s.notes : undefined,
     status: s.status,
     createdAt: s.created_at,
+    photo: 'photo' in s ? s.photo : undefined,
   };
 }
 
@@ -115,6 +119,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [feeTypeBreakdown] = useState<{ name: string; amount: number; percentage: number; color: string }[]>(emptyFeeTypeBreakdown);
 
   const fetchAll = useCallback(async () => {
+    if (!authService.isAuthenticated()) {
+      setLoading(false);
+      return;                       // logged out: don't call protected APIs
+    }
     setLoading(true);
     setError(null);
     try {
@@ -142,6 +150,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   useEffect(() => {
     fetchAll();
+
+    const onLogin = () => fetchAll();
+    const onLogout = () => { setGrades([]); setStudents([]); setPayments([]); };
+    window.addEventListener('auth:login', onLogin);
+    window.addEventListener('auth:logout', onLogout);
+    return () => {
+      window.removeEventListener('auth:login', onLogin);
+      window.removeEventListener('auth:logout', onLogout);
+    };
   }, [fetchAll]);
 
   const getGradeById = (id: string): Grade | undefined => {
@@ -186,10 +203,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return Math.max(0, total - paid);
   };
 
+  const getStudentComputedStatus = (studentId: string): StudentStatus => {
+    const student = getStudentById(studentId);
+    if (!student) return 'Pending';
+    if (student.status === 'Admitted') return 'Admitted';
+    const paid = getStudentPaidAmount(studentId);
+    const balance = getStudentBalance(studentId);
+    if (paid === 0) return 'Pending';
+    if (balance > 0) return 'Partial';
+    return 'Paid';
+  };
+
   const addStudent = async (
     data: Omit<Student, 'id' | 'applicationNo' | 'status' | 'createdAt'> & { status?: StudentStatus }
   ): Promise<Student> => {
-    const apiData = {
+    const apiData: Record<string, unknown> = {
       first_name: data.firstName,
       middle_name: data.middleName,
       last_name: data.lastName,
@@ -209,6 +237,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       previous_school: data.previousSchool,
       additional_info: data.additionalInfo,
     };
+    if (data.photo) apiData.photo = data.photo;
     const created = await api.students.create(apiData);
     const mapped = mapApiStudent(created);
     setStudents((prev) => [mapped, ...prev]);
@@ -238,6 +267,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (data.additionalInfo !== undefined) apiData.additional_info = data.additionalInfo;
     if (data.notes !== undefined) apiData.notes = data.notes;
     if (data.status !== undefined) apiData.status = data.status;
+    if (data.photo !== undefined) apiData.photo = data.photo;
 
     await api.students.update(id, apiData);
     await fetchAll();
@@ -276,15 +306,44 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       name: gradeData.name,
       description: gradeData.description,
       age_range: gradeData.ageRange,
+      fee_groups: gradeData.feeGroups.map(fg => ({
+        id: fg.id,
+        name: fg.name,
+        items: fg.items.map(i => ({ id: i.id, label: i.label, amount: i.amount }))
+      }))
     };
-    // Note: Backend doesn't have a create endpoint for grades (ReadOnlyModelViewSet)
-    // This would need a backend change. For now, throw error.
-    throw new Error('Grade creation not supported via API yet. Use Django admin.');
+    const created = await api.grades.create(apiData);
+    const mapped = mapApiGrade(created);
+    setGrades((prev) => [...prev, mapped]);
+    return mapped;
   };
 
   const updateGrade = async (id: string, data: Partial<Grade>): Promise<void> => {
-    // Note: Backend doesn't have update endpoint for grades (ReadOnlyModelViewSet)
-    throw new Error('Grade update not supported via API yet. Use Django admin.');
+    const apiData: Record<string, unknown> = {};
+    if (data.name !== undefined) apiData.name = data.name;
+    if (data.description !== undefined) apiData.description = data.description;
+    if (data.ageRange !== undefined) apiData.age_range = data.ageRange;
+    if (data.feeGroups !== undefined) {
+      apiData.fee_groups = data.feeGroups.map(fg => ({
+        id: fg.id,
+        name: fg.name,
+        items: fg.items.map(i => ({ id: i.id, label: i.label, amount: i.amount }))
+      }));
+    }
+    await api.grades.update(id, apiData);
+    await fetchAll();
+  };
+
+  const deleteGrade = async (id: string): Promise<void> => {
+    const grade = grades.find(g => g.id === id);
+    const enrolledStudents = students.filter(s => s.gradeId === id);
+    
+    if (enrolledStudents.length > 0) {
+      throw new Error(`Cannot delete ${grade?.name || 'grade'}: ${enrolledStudents.length} student(s) are enrolled. Please reassign or remove them first.`);
+    }
+    
+    await api.grades.delete(id);
+    setGrades((prev) => prev.filter((g) => g.id !== id));
   };
 
   const refetch = fetchAll;
@@ -304,6 +363,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         addPayment,
         addGrade,
         updateGrade,
+        deleteGrade,
         getGradeById,
         getGradeTotalFees,
         getStudentById,
@@ -311,6 +371,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         getStudentTotalFees,
         getStudentPaidAmount,
         getStudentBalance,
+        getStudentComputedStatus,
         financeSummary,
         monthlyCollections,
         feeTypeBreakdown,

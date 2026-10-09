@@ -17,6 +17,40 @@ export interface AuthTokens {
   refresh: string;
 }
 
+// Module-level refresh state
+let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
+
+// Custom event for logout (no full page reload)
+const AUTH_LOGOUT_EVENT = 'auth:logout';
+
+export function triggerAuthLogout(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(AUTH_LOGOUT_EVENT));
+  }
+}
+
+export function onAuthLogout(callback: () => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  window.addEventListener(AUTH_LOGOUT_EVENT, callback);
+  return () => window.removeEventListener(AUTH_LOGOUT_EVENT, callback);
+}
+
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  is_staff: boolean;
+  is_superuser: boolean;
+}
+
+export interface AuthTokens {
+  access: string;
+  refresh: string;
+}
+
 export const authService = {
   getAccessToken(): string | null {
     return localStorage.getItem(TOKEN_KEY);
@@ -77,6 +111,11 @@ export const authService = {
     const user = await this.fetchUserProfile(tokens.access);
     this.setUser(user);
 
+    // Notify app that login succeeded so data can be loaded
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('auth:login'));
+    }
+
     return { tokens, user };
   },
 
@@ -120,28 +159,66 @@ export const authService = {
   },
 };
 
-export const authenticatedFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
-  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-  const fullUrl = url.startsWith('http') ? url : `${API_BASE}${url}`;
+export const authenticatedFetch = async (
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> => {
+  const API_BASE =
+    import.meta.env.VITE_API_URL ||
+    'http://localhost:8000/api';
+
+  const fullUrl = url.startsWith('http')
+    ? url
+    : `${API_BASE}${url}`;
 
   let accessToken = authService.getAccessToken();
-  const headers = {
+
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
-    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    ...(options.headers as Record<string, string>),
   };
 
-  let res = await fetch(fullUrl, { ...options, headers });
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
 
+  let res = await fetch(fullUrl, {
+    ...options,
+    headers,
+  });
+
+  // Access token expired
   if (res.status === 401) {
-    const newToken = await authService.refreshAccessToken();
-    if (newToken) {
-      headers.Authorization = `Bearer ${newToken}`;
-      res = await fetch(fullUrl, { ...options, headers });
-    } else {
+    const hadSession = !!accessToken;
+
+    // No session, or the refresh endpoint itself failed: stop here
+    if (fullUrl.includes('/auth/refresh') || !authService.getRefreshToken()) {
       authService.clear();
-      window.location.href = '/login';
+      if (hadSession) triggerAuthLogout();   // only if the user WAS logged in
+      throw new Error('Not authenticated');
     }
+
+    if (!isRefreshing) {
+      console.log('Access token expired. Starting refresh...');
+      isRefreshing = true;
+      refreshPromise = authService.refreshAccessToken().finally(() => {
+        isRefreshing = false;
+        refreshPromise = null;
+      });
+    }
+
+    const newToken = await refreshPromise!;
+
+    if (!newToken) {
+      authService.clear();
+      triggerAuthLogout();
+      throw new Error('Session expired');
+    }
+
+    console.log('Access token refreshed successfully. Retrying request...');
+
+    headers.Authorization = `Bearer ${newToken}`;
+    res = await fetch(fullUrl, { ...options, headers });
   }
 
   return res;
