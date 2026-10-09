@@ -232,6 +232,8 @@ export const AdminGradePanel: React.FC<AdminGradePanelProps> = ({
           </button>
           <button
             onClick={async () => {
+              console.log('[AdminGradePanel] Delete clicked', { gradeId: grade.id, gradeName: grade.name, enrolledCount: enrolled.length });
+              console.log('[AdminGradePanel] deleteGrade function:', deleteGrade);
               const enrolledCount = enrolled.length;
               let confirmMessage = `Delete "${grade.name}" grade and its fee structure?`;
               if (enrolledCount > 0) {
@@ -241,8 +243,11 @@ export const AdminGradePanel: React.FC<AdminGradePanelProps> = ({
               }
               if (window.confirm(confirmMessage)) {
                 try {
+                  console.log('[AdminGradePanel] Calling deleteGrade...');
                   await deleteGrade(grade.id);
+                  console.log('[AdminGradePanel] deleteGrade completed');
                 } catch (err) {
+                  console.error('[AdminGradePanel] deleteGrade error:', err);
                   alert(err instanceof Error ? err.message : 'Failed to delete grade');
                 }
               }

@@ -147,7 +147,10 @@ export const api = {
     get: (id: string) => fetchJson<Grade>(`/grades/${id}/`),
     create: (data: Record<string, unknown>) => fetchJson<Grade>('/grades/', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: Record<string, unknown>) => fetchJson<Grade>(`/grades/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }),
-    delete: (id: string) => fetchJson<void>(`/grades/${id}/`, { method: 'DELETE' }),
+    delete: (id: string) => {
+      console.log('[API] grades.delete called', { id, url: `/grades/${id}/` });
+      return fetchJson<void>(`/grades/${id}/`, { method: 'DELETE' });
+    },
   },
   students: {
     list: (params?: Record<string, string>) => {

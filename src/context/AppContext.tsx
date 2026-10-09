@@ -335,14 +335,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const deleteGrade = async (id: string): Promise<void> => {
+    console.log('[AppContext] deleteGrade called', { id });
     const grade = grades.find(g => g.id === id);
     const enrolledStudents = students.filter(s => s.gradeId === id);
+    console.log('[AppContext] grade found:', grade);
+    console.log('[AppContext] enrolledStudents:', enrolledStudents.length);
     
     if (enrolledStudents.length > 0) {
-      throw new Error(`Cannot delete ${grade?.name || 'grade'}: ${enrolledStudents.length} student(s) are enrolled. Please reassign or remove them first.`);
+      const errMsg = `Cannot delete ${grade?.name || 'grade'}: ${enrolledStudents.length} student(s) are enrolled. Please reassign or remove them first.`;
+      console.log('[AppContext] throwing error:', errMsg);
+      throw new Error(errMsg);
     }
     
+    console.log('[AppContext] calling api.grades.delete...');
     await api.grades.delete(id);
+    console.log('[AppContext] api.grades.delete done, updating state');
     setGrades((prev) => prev.filter((g) => g.id !== id));
   };
 
