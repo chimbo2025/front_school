@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   FileText,
   Plus,
@@ -28,6 +28,7 @@ export const AdminGradePanel: React.FC<AdminGradePanelProps> = ({
   onViewStudents,
 }) => {
   const { updateGrade, deleteGrade, students } = useApp();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const enrolled = students.filter((s) => s.gradeId === grade.id);
   const grandTotal = grade.feeGroups.reduce(
@@ -231,26 +232,12 @@ export const AdminGradePanel: React.FC<AdminGradePanelProps> = ({
             <span>Register in {grade.name}</span>
           </button>
           <button
-            onClick={async () => {
-              console.log('[AdminGradePanel] Delete clicked', { gradeId: grade.id, gradeName: grade.name, enrolledCount: enrolled.length });
-              console.log('[AdminGradePanel] deleteGrade function:', deleteGrade);
-              const enrolledCount = enrolled.length;
-              let confirmMessage = `Delete "${grade.name}" grade and its fee structure?`;
-              if (enrolledCount > 0) {
-                confirmMessage = `Cannot delete "${grade.name}": ${enrolledCount} student(s) enrolled. Reassign them first.`;
-                alert(confirmMessage);
+            onClick={() => {
+              if (enrolled.length > 0) {
+                alert(`Cannot delete "${grade.name}": ${enrolled.length} student(s) enrolled. Reassign them first.`);
                 return;
               }
-              if (window.confirm(confirmMessage)) {
-                try {
-                  console.log('[AdminGradePanel] Calling deleteGrade...');
-                  await deleteGrade(grade.id);
-                  console.log('[AdminGradePanel] deleteGrade completed');
-                } catch (err) {
-                  console.error('[AdminGradePanel] deleteGrade error:', err);
-                  alert(err instanceof Error ? err.message : 'Failed to delete grade');
-                }
-              }
+              setShowDeleteConfirm(true);
             }}
             className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-red-50 text-red-600 border border-red-200 text-xs font-semibold transition-colors hover:bg-red-100"
             disabled={enrolled.length > 0}
@@ -262,5 +249,50 @@ export const AdminGradePanel: React.FC<AdminGradePanelProps> = ({
         </div>
       </div>
     </div>
+
+    {/* Delete Grade Confirmation Modal */}
+    {showDeleteConfirm && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-900/60 backdrop-blur-xs">
+        <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+          <div className="flex items-center gap-3 p-5 bg-red-50 border-b border-red-100">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100">
+              <svg className="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="font-bold text-base text-red-900">Delete Grade</h3>
+          </div>
+          <div className="p-5 space-y-4">
+            <p className="text-slate-700">
+              Are you sure you want to delete <strong className="text-slate-900">{grade.name}</strong> and its fee structure?
+            </p>
+            <p className="text-xs text-slate-500 bg-slate-50 p-3 rounded-lg">
+              This action cannot be undone. All fee groups and items will be permanently removed.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await deleteGrade(grade.id);
+                  } catch (err) {
+                    alert(err instanceof Error ? err.message : 'Failed to delete grade');
+                  }
+                  setShowDeleteConfirm(false);
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700"
+              >
+                Delete Grade
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
   );
 };
