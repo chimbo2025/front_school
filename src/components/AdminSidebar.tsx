@@ -3,7 +3,7 @@ import { ArrowLeft, ChevronRight, ShieldCheck, X, LogOut, User as UserIcon } fro
 import { schoolConfig } from '../config/schoolConfig';
 import { User as UserType } from '../services/auth';
 
-export type AdminTab = 'students' | 'finance' | 'grades' | 'register';
+export type AdminTab = 'students' | 'finance' | 'grades' | 'register' | 'review' | 'audit' | 'settings';
 
 export interface AdminNavChild {
   id: AdminTab;

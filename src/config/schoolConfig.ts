@@ -12,6 +12,8 @@ export interface SchoolConfig {
   academicYears: string[];
   motto: string;
   establishedYear: number;
+  /** Lipa Namba / collection account number for school payments */
+  lipaNamba: string;
 }
 
 export const schoolConfig: SchoolConfig = {
@@ -28,6 +30,7 @@ export const schoolConfig: SchoolConfig = {
   academicYears: ["2026/2027", "2025/2026"],
   motto: "Knowledge, Character, Innovation",
   establishedYear: 2012,
+  lipaNamba: "760003829",
 };
 
 /**

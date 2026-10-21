@@ -8,7 +8,8 @@
     "build": "node node_modules/vite/bin/vite.js build",
     "preview": "node node_modules/vite/bin/vite.js preview",
     "clean": "node -e \"fs.rmSync('dist',{recursive:true,force:true});fs.rmSync('server.js',{force:true})\"",
-    "lint": "node node_modules/typescript/bin/tsc --noEmit"
+    "lint": "node node_modules/typescript/bin/tsc --noEmit",
+    "test": "node node_modules/vitest/vitest.mjs run"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -33,6 +34,7 @@
     "esbuild": "^0.28.0",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.9"
   }
 }

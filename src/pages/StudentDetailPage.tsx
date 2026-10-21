@@ -10,19 +10,23 @@ import {
   CheckCircle2, 
   Clock, 
   AlertTriangle,
-  Receipt,
+  Receipt as ReceiptIcon,
   FileCheck,
   ChevronRight,
   Plus,
   BarChart3,
   Layers,
   Menu,
-  Users
+  Users,
+  Eye,
+  RotateCcw,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatTsh, schoolConfig } from '../config/schoolConfig';
 import { FeeStatement } from '../components/FeeStatement';
 import { PaymentModal } from '../components/PaymentModal';
+import { ReceiptModal } from '../components/Receipt';
+import { ReallocationModal } from '../components/ReallocationModal';
 import { AdminSidebar, AdminNavItem, AdminTab } from '../components/AdminSidebar';
 import { StudentStatus } from '../types';
 import { User as UserType } from '../services/auth';
@@ -49,6 +53,9 @@ export const StudentDetailPage: React.FC<StudentDetailPageProps> = ({
     getStudentTotalFees, 
     getStudentPaidAmount, 
     getStudentBalance,
+    getStudentCredit,
+    getStudentAccount,
+    getAllocationBreakdown,
     getStudentComputedStatus,
     updateStudentStatus,
     students,
@@ -58,6 +65,23 @@ export const StudentDetailPage: React.FC<StudentDetailPageProps> = ({
 
   const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [receiptPaymentId, setReceiptPaymentId] = useState<string | null>(null);
+  const [reallocationPaymentId, setReallocationPaymentId] = useState<string | null>(null);
+
+  // Mobile drawer: close on Escape and lock background scroll
+  // (must run before the early return below — Rules of Hooks)
+  useEffect(() => {
+    if (!isMobileNavOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsMobileNavOpen(false);
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isMobileNavOpen]);
 
   const student = getStudentById(studentId);
   if (!student) {
@@ -85,6 +109,10 @@ export const StudentDetailPage: React.FC<StudentDetailPageProps> = ({
   const totalFees = getStudentTotalFees(student.id);
   const paidAmount = getStudentPaidAmount(student.id);
   const balance = getStudentBalance(student.id);
+  const credit = getStudentCredit(student.id);
+  const account = getStudentAccount(student.id);
+  const allocationBreakdown = getAllocationBreakdown(student.id);
+  const feeLines = allocationBreakdown.map((ab) => ab.feeLine);
   const computedStatus = getStudentComputedStatus(student.id);
 
   const getStatusConfig = (status: StudentStatus) => {
@@ -151,20 +179,6 @@ export const StudentDetailPage: React.FC<StudentDetailPageProps> = ({
     user,
     onLogout,
   };
-
-  // Mobile drawer: close on Escape and lock background scroll
-  useEffect(() => {
-    if (!isMobileNavOpen) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsMobileNavOpen(false);
-    };
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.body.style.overflow = '';
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [isMobileNavOpen]);
 
   return (
     <div className="min-h-screen bg-slate-100 flex">
@@ -522,7 +536,7 @@ export const StudentDetailPage: React.FC<StudentDetailPageProps> = ({
 
           {payments.length === 0 ? (
             <div className="p-8 text-center text-slate-500 space-y-2">
-              <Receipt className="w-8 h-8 text-slate-300 mx-auto" />
+              <ReceiptIcon className="w-8 h-8 text-slate-300 mx-auto" />
               <div className="text-sm font-medium text-slate-700">No Payments Recorded Yet</div>
               <p className="text-xs text-slate-400 max-w-xs mx-auto">
                 No admission fee or tuition installments have been received for {student.firstName}.
@@ -544,37 +558,84 @@ export const StudentDetailPage: React.FC<StudentDetailPageProps> = ({
                     <th className="px-5 py-3">Channel / Method</th>
                     <th className="px-5 py-3">Details / Purpose</th>
                     <th className="px-5 py-3 text-right">Amount (TZS)</th>
+                    <th className="px-5 py-3 text-right">Receipt</th>
+                    <th className="px-5 py-3 text-right">Reallocate</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {payments.map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="px-5 py-3 font-medium text-slate-900 whitespace-nowrap">
-                        {p.date}
-                      </td>
-                      <td className="px-5 py-3 font-mono text-purple-700 font-semibold whitespace-nowrap">
-                        {p.reference}
-                      </td>
-                      <td className="px-5 py-3 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-700">
-                          {p.method === 'Mixx by Yas' && '📱 Mixx by Yas'}
-                          {p.method === 'M-Pesa' && '🔴 M-Pesa'}
-                          {p.method === 'Airtel Money' && '⚪ Airtel Money'}
-                          {p.method === 'Bank' && '🏦 Bank Transfer'}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-slate-600">
-                        {p.notes || 'School Fee Installment'}
-                      </td>
-                      <td className="px-5 py-3 text-right font-mono font-bold text-[#16a34a] tabular-nums whitespace-nowrap">
-                        {formatTsh(p.amount)}
-                      </td>
-                    </tr>
-                  ))}
+                  {payments.map((p) => {
+                    const paymentBreakdown = allocationBreakdown
+                      .map((fl) => {
+                        const allocForPayment = fl.allocations.find((a) => a.paymentId === p.id);
+                        if (!allocForPayment) return null;
+                        return {
+                          feeGroup: fl.feeLine.feeGroupName,
+                          feeItem: fl.feeLine.feeItemLabel,
+                          amount: allocForPayment.amount,
+                        };
+                      })
+                      .filter((b): b is typeof b & { feeGroup: string; feeItem: string; amount: number } => b !== null);
+
+                    return (
+                      <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="px-5 py-3 font-medium text-slate-900 whitespace-nowrap">
+                          {p.date}
+                        </td>
+                        <td className="px-5 py-3 font-mono text-purple-700 font-semibold whitespace-nowrap">
+                          {p.reference}
+                        </td>
+                        <td className="px-5 py-3 whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-700">
+                            {p.method === 'Mixx by Yas' && '📱 Mixx by Yas'}
+                            {p.method === 'M-Pesa' && '🔴 M-Pesa'}
+                            {p.method === 'Airtel Money' && '⚪ Airtel Money'}
+                            {p.method === 'Bank' && '🏦 Bank Transfer'}
+                            {p.method === 'Lipa Namba' && '💠 Lipa Namba'}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-slate-600">
+                          {paymentBreakdown.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {paymentBreakdown.map((item, idx) => (
+                                <span key={idx} className="px-1.5 py-0.5 text-[10px] bg-purple-50 text-purple-700 rounded">
+                                  {item.feeItem}: {formatTsh(item.amount)}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            p.notes || 'School Fee Installment'
+                          )}
+                        </td>
+                        <td className="px-5 py-3 text-right font-mono font-bold text-[#16a34a] tabular-nums whitespace-nowrap">
+                          {formatTsh(p.amount)}
+                        </td>
+                        <td className="px-5 py-3 text-right whitespace-nowrap">
+                          <button
+                            onClick={() => setReceiptPaymentId(p.id)}
+                            className="px-2.5 py-1 text-xs font-semibold text-purple-700 hover:bg-purple-50 rounded-lg transition-colors flex items-center justify-end gap-1"
+                            title="View Receipt"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Receipt</span>
+                          </button>
+                        </td>
+                        <td className="px-5 py-3 text-right whitespace-nowrap">
+                          <button
+                            onClick={() => setReallocationPaymentId(p.id)}
+                            className="px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-end gap-1"
+                            title="Reallocate Payment"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Reallocate</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
                 <tfoot>
                   <tr className="bg-slate-50 font-bold border-t border-slate-200">
-                    <td colSpan={4} className="px-5 py-3 text-right text-slate-700 uppercase">
+                    <td colSpan={5} className="px-5 py-3 text-right text-slate-700 uppercase">
                       Total Payments Verified:
                     </td>
                     <td className="px-5 py-3 text-right font-mono text-emerald-700 text-sm">
@@ -596,6 +657,38 @@ export const StudentDetailPage: React.FC<StudentDetailPageProps> = ({
         defaultAmount={balance > 0 ? Math.min(balance, 150000) : 150000}
         title={`Record Payment for ${student.firstName} ${student.lastName}`}
       />
+
+      {/* Receipt Modal */}
+      {receiptPaymentId && (
+        <ReceiptModal
+          isOpen={true}
+          onClose={() => setReceiptPaymentId(null)}
+          student={student}
+          payment={payments.find((p) => p.id === receiptPaymentId)!}
+          gradeName={grade?.name}
+          feeLines={allocationBreakdown}
+          account={{
+            totalFees: account?.totalFees || totalFees,
+            totalPaid: account?.totalPaid || paidAmount,
+            balance: account?.balance || balance,
+            credit: account?.credit || credit,
+          }}
+        />
+      )}
+
+      {/* Reallocation Modal */}
+      {reallocationPaymentId && (
+        <ReallocationModal
+          isOpen={true}
+          onClose={() => setReallocationPaymentId(null)}
+          student={student}
+          payment={payments.find((p) => p.id === reallocationPaymentId)!}
+          grade={grade!}
+          feeLines={feeLines}
+          currentAllocations={allocationBreakdown.flatMap((ab) => ab.allocations)}
+          onSuccess={() => {}}
+        />
+      )}
       </div>
     </div>
   );

@@ -661,19 +661,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
               </ul>
             </div>
 
-            {/* Col 5: Payment Channels */}
+            {/* Col 5: Payment Channel */}
             <div>
               <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-3">
-                School Fee Channels
+                School Fee Channel
               </h4>
               <p className="text-sm text-slate-400 mb-2">
-                Accepted methods for fee payments:
+                Pay school fees via:
               </p>
               <div className="space-y-1.5 text-sm">
-                <div className="bg-slate-800/80 px-2.5 py-1 rounded text-slate-300">📱 Mixx by Yas (Zantel)</div>
-                <div className="bg-slate-800/80 px-2.5 py-1 rounded text-slate-300">🔴 Vodacom M-Pesa</div>
-                <div className="bg-slate-800/80 px-2.5 py-1 rounded text-slate-300">⚪ Airtel Money</div>
-                <div className="bg-slate-800/80 px-2.5 py-1 rounded text-slate-300">🏦 PBZ & CRDB Bank</div>
+                <div className="bg-slate-800/80 px-2.5 py-1 rounded text-slate-300">💠 Lipa Namba</div>
+                <div className="px-2.5 text-xs font-mono text-slate-400">{schoolConfig.lipaNamba}</div>
               </div>
             </div>
           </div>

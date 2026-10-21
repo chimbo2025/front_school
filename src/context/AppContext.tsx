@@ -1,12 +1,27 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { Grade, Student, Payment, StudentStatus, PaymentMethod, FinanceSummary, Relationship, FeeItem, FeeGroup } from '../types';
-import { api, Grade as ApiGrade, Student as ApiStudent, StudentListItem, Payment as ApiPayment } from '../services/api';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
+import {
+  Grade, Student, Payment, StudentStatus, PaymentMethod, FinanceSummary, Relationship, FeeItem, FeeGroup,
+  Allocation, FeeLine, StudentAccount, PaymentClaim, AppSettings, AllocationRule, StatementRow,
+  StatementImport, AuditEntry, AuditAction, ClaimStatus,
+} from '../types';
+import { api, Grade as ApiGrade, Student as ApiStudent, StudentListItem, Payment as ApiPayment, ApiError } from '../services/api';
 import { authService } from '../services/auth';
+import {
+  computeStudentAccount, allocatePayment, getAllocationBreakdown as libGetAllocationBreakdown,
+  hasDuplicateTransactionId, DEFAULT_ALLOCATION_PRIORITY, buildFeeLines,
+  reallocatePayment as libReallocatePayment,
+} from '../lib';
 
 interface AppContextType {
   grades: Grade[];
   students: Student[];
   payments: Payment[];
+  allocations: Allocation[];
+  claims: PaymentClaim[];
+  statementRows: StatementRow[];
+  statementImports: StatementImport[];
+  auditEntries: AuditEntry[];
+  settings: AppSettings;
   loading: boolean;
   error: string | null;
   addStudent: (student: Omit<Student, 'id' | 'applicationNo' | 'status' | 'createdAt'> & { status?: StudentStatus }) => Promise<Student>;
@@ -24,7 +39,32 @@ interface AppContextType {
   getStudentTotalFees: (studentId: string) => number;
   getStudentPaidAmount: (studentId: string) => number;
   getStudentBalance: (studentId: string) => number;
+  getStudentCredit: (studentId: string) => number;
+  getStudentAccount: (studentId: string) => StudentAccount | null;
   getStudentComputedStatus: (studentId: string) => StudentStatus;
+  getAllocationBreakdown: (studentId: string) => Array<{ feeLine: FeeLine; paid: number; due: number; status: 'UNPAID' | 'PARTIAL' | 'PAID'; allocations: Allocation[] }>;
+  getStudentClaims: (studentId: string) => PaymentClaim[];
+  submitClaim: (claim: {
+    studentId: string; amount: number; transactionId: string; paymentDate: string;
+    payerPhone: string; method?: PaymentMethod; screenshot?: string; notes?: string;
+  }) => Promise<PaymentClaim>;
+  approveClaim: (claimId: string, options?: { reviewedBy?: string; reason?: string }) => Promise<{ claim: PaymentClaim; payment: Payment }>;
+  rejectClaim: (claimId: string, reason: string, reviewedBy?: string) => Promise<PaymentClaim>;
+  scanNotFound: (performedBy?: string) => Promise<{ not_found: string[]; restored: string[]; days: number }>;
+  refreshClaims: () => Promise<void>;
+  importStatement: (payload: {
+    fileName: string; fileHash: string; mapping: AppSettings['csvMapping'];
+    uploadedBy?: string; rows: unknown[]; matches: unknown[];
+  }) => Promise<{ importedRows: number; skippedRows: number; payments: Payment[] }>;
+  assignStatementRow: (rowId: string, studentId: string, note?: string, performedBy?: string) => Promise<Payment>;
+  refreshStatements: () => Promise<void>;
+  reallocatePayment: (args: {
+    paymentId: string; studentId: string; targetFeeLineId: string; amount: number;
+    reason: string; performedBy: string;
+  }) => Promise<void>;
+  updateSettings: (partial: Partial<AppSettings>, performedBy?: string) => Promise<void>;
+  refreshAudit: () => Promise<void>;
+  logAudit: (entry: { studentId?: string; paymentId?: string; action: AuditAction; performedBy: string; reason?: string; before?: Record<string, unknown>; after?: Record<string, unknown> }) => Promise<void>;
   financeSummary: FinanceSummary;
   monthlyCollections: { month: string; amount: number }[];
   feeTypeBreakdown: { name: string; amount: number; percentage: number; color: string }[];
@@ -105,6 +145,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [grades, setGrades] = useState<Grade[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [allocations, setAllocations] = useState<Allocation[]>([]);
+  const [claims, setClaims] = useState<PaymentClaim[]>([]);
+  const [statementRows, setStatementRows] = useState<StatementRow[]>([]);
+  const [statementImports, setStatementImports] = useState<StatementImport[]>([]);
+  const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
+  const [settings, setSettings] = useState<AppSettings>({
+    allocationOrder: DEFAULT_ALLOCATION_PRIORITY,
+    notFoundDays: 3,
+    csvMapping: null,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [financeSummary, setFinanceSummary] = useState<FinanceSummary>(emptyFinanceSummary);
@@ -119,27 +169,57 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [feeTypeBreakdown] = useState<{ name: string; amount: number; percentage: number; color: string }[]>(emptyFeeTypeBreakdown);
 
   const fetchAll = useCallback(async () => {
-    if (!authService.isAuthenticated()) {
-      setLoading(false);
-      return;                       // logged out: don't call protected APIs
-    }
-    setLoading(true);
+    const authed = authService.isAuthenticated();
     setError(null);
+    if (authed) setLoading(true);
+
+    // Public data (grades/claims/settings endpoints allow anonymous access —
+    // needed by the parent portal and the public fee modal).
     try {
-      const [gradesRes, studentsRes, financeRes] = await Promise.all([
+      const [gradesRes, claimsRes, settingsRes] = await Promise.all([
         api.grades.list(),
+        api.claims.list(),
+        api.settings.list(),
+      ]);
+      setGrades(gradesRes.results.map(mapApiGrade));
+      setClaims(claimsRes.results);
+      setSettings({
+        allocationOrder: settingsRes.allocationOrder?.length ? settingsRes.allocationOrder : DEFAULT_ALLOCATION_PRIORITY,
+        notFoundDays: settingsRes.notFoundDays || 3,
+        csvMapping: settingsRes.csvMapping || null,
+      });
+    } catch (e) {
+      if (authed) setError(e instanceof Error ? e.message : 'Failed to load data');
+    }
+
+    if (!authed) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const [studentsRes, financeRes, payRes, allocs, rows, imports, audit] = await Promise.all([
         api.students.list(),
         api.finance.summary(),
+        api.payments.list({ page_size: '500' }),
+        api.allocations.list(),
+        api.statements.rows(),
+        api.statements.imports(),
+        api.audit.list(),
       ]);
 
-      setGrades(gradesRes.results.map(mapApiGrade));
       setStudents(studentsRes.results.map(mapApiStudent));
+      setPayments(payRes.results.map(mapApiPayment));
       setFinanceSummary({
         totalExpected: financeRes.summary.total_expected,
         totalCollected: financeRes.summary.total_collected,
         outstanding: financeRes.summary.outstanding,
         collectionRate: financeRes.summary.collection_rate,
       });
+      setAllocations(allocs);
+      setStatementRows(rows);
+      setStatementImports(imports);
+      setAuditEntries(audit);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load data');
@@ -148,11 +228,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, []);
 
+  const refreshClaims = useCallback(async () => {
+    const res = await api.claims.list();
+    setClaims(res.results);
+  }, []);
+
+  const refreshStatements = useCallback(async () => {
+    const [rows, imports] = await Promise.all([api.statements.rows(), api.statements.imports()]);
+    setStatementRows(rows);
+    setStatementImports(imports);
+  }, []);
+
+  const refreshAudit = useCallback(async () => {
+    setAuditEntries(await api.audit.list());
+  }, []);
+
   useEffect(() => {
     fetchAll();
 
     const onLogin = () => fetchAll();
-    const onLogout = () => { setGrades([]); setStudents([]); setPayments([]); };
+    const onLogout = () => {
+      setGrades([]); setStudents([]); setPayments([]); setAllocations([]);
+      setClaims([]); setStatementRows([]); setStatementImports([]); setAuditEntries([]);
+    };
     window.addEventListener('auth:login', onLogin);
     window.addEventListener('auth:logout', onLogout);
     return () => {
@@ -197,21 +295,283 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       .reduce((sum, p) => sum + (p.amount || 0), 0);
   };
 
+  const getStudentCredit = (studentId: string): number => {
+    const student = getStudentById(studentId);
+    if (!student) return 0;
+    const grade = getGradeById(student.gradeId);
+    if (!grade) return 0;
+    const studentPayments = getStudentPayments(studentId);
+    const studentAllocations = allocations.filter((a) => a.studentId === studentId);
+    const account = computeStudentAccount(student, grade, studentPayments, studentAllocations);
+    return account.credit;
+  };
+
   const getStudentBalance = (studentId: string): number => {
-    const total = getStudentTotalFees(studentId);
-    const paid = getStudentPaidAmount(studentId);
-    return Math.max(0, total - paid);
+    const student = getStudentById(studentId);
+    if (!student) return 0;
+    const grade = getGradeById(student.gradeId);
+    if (!grade) return 0;
+    const studentPayments = getStudentPayments(studentId);
+    const studentAllocations = allocations.filter((a) => a.studentId === studentId);
+    const account = computeStudentAccount(student, grade, studentPayments, studentAllocations);
+    return account.balance;
+  };
+
+  const getStudentAccount = (studentId: string): StudentAccount | null => {
+    const student = getStudentById(studentId);
+    if (!student) return null;
+    const grade = getGradeById(student.gradeId);
+    if (!grade) return null;
+    const studentPayments = getStudentPayments(studentId);
+    const studentAllocations = allocations.filter((a) => a.studentId === studentId);
+    return computeStudentAccount(student, grade, studentPayments, studentAllocations);
   };
 
   const getStudentComputedStatus = (studentId: string): StudentStatus => {
     const student = getStudentById(studentId);
     if (!student) return 'Pending';
     if (student.status === 'Admitted') return 'Admitted';
-    const paid = getStudentPaidAmount(studentId);
-    const balance = getStudentBalance(studentId);
-    if (paid === 0) return 'Pending';
-    if (balance > 0) return 'Partial';
+    const account = getStudentAccount(studentId);
+    if (!account) return 'Pending';
+    if (account.totalPaid === 0) return 'Pending';
+    if (account.balance > 0) return 'Partial';
     return 'Paid';
+  };
+
+  const allocationRules = (): AllocationRule[] =>
+    settings.allocationOrder?.length ? settings.allocationOrder : DEFAULT_ALLOCATION_PRIORITY;
+
+  const getAllocationBreakdown = (studentId: string) => {
+    const student = getStudentById(studentId);
+    if (!student) return [];
+    const grade = getGradeById(student.gradeId);
+    if (!grade) return [];
+    const studentPayments = getStudentPayments(studentId);
+    const studentAllocations = allocations.filter((a) => a.studentId === studentId && !a.reversed);
+    return libGetAllocationBreakdown(student, grade, studentPayments, studentAllocations, allocationRules());
+  };
+
+  const getStudentClaims = (studentId: string): PaymentClaim[] => {
+    return claims
+      .filter((c) => c.studentId === studentId)
+      .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+  };
+
+  const refreshPayments = useCallback(async () => {
+    const res = await api.payments.list({ page_size: '500' });
+    setPayments(res.results.map(mapApiPayment));
+  }, []);
+
+  /**
+   * Run the allocation engine for one payment and persist the resulting
+   * allocation rows (plus an optional audit entry) in a single bulk call.
+   */
+  const allocateAndPersist = async (
+    payment: Payment,
+    actor: string,
+    existingOverride: Allocation[]
+  ): Promise<Allocation[]> => {
+    const student = getStudentById(payment.studentId);
+    const grade = student ? getGradeById(student.gradeId) : undefined;
+    if (!student || !grade) return [];
+    const { allocations: newAllocs } = allocatePayment(payment, student, grade, existingOverride, allocationRules());
+    if (newAllocs.length === 0) return [];
+    await api.allocations.bulk({
+      allocations: newAllocs.map((a) => ({
+        id: a.id,
+        payment: a.paymentId,
+        student: a.studentId,
+        fee_line_id: a.feeLineId,
+        amount: a.amount,
+        created_by: actor,
+      })),
+      performed_by: actor,
+    });
+    setAllocations((prev) => [...prev, ...newAllocs]);
+    return newAllocs;
+  };
+
+  const submitClaim = async (claimData: {
+    studentId: string; amount: number; transactionId: string; paymentDate: string;
+    payerPhone: string; method?: PaymentMethod; screenshot?: string; notes?: string;
+  }): Promise<PaymentClaim> => {
+    const created = await api.claims.create({
+      student: claimData.studentId,
+      amount: claimData.amount,
+      transaction_id: (claimData.transactionId || '').trim().toUpperCase(),
+      payment_date: claimData.paymentDate,
+      payer_phone: claimData.payerPhone,
+      method: claimData.method || '',
+      screenshot: claimData.screenshot || '',
+      notes: claimData.notes || '',
+    });
+    setClaims((prev) => [created, ...prev]);
+    return created;
+  };
+
+  const approveClaim = async (
+    claimId: string,
+    options: { reviewedBy?: string; reason?: string } = {}
+  ): Promise<{ claim: PaymentClaim; payment: Payment }> => {
+    const reviewedBy = options.reviewedBy || 'accountant';
+    const res = await api.claims.approve(claimId, { reviewed_by: reviewedBy, reason: options.reason });
+    const payment = mapApiPayment(res.payment);
+    setClaims((prev) => prev.map((c) => (c.id === claimId ? res.claim : c)));
+    setPayments((prev) => [payment, ...prev]);
+    await allocateAndPersist(payment, reviewedBy, [...allocations]);
+    await Promise.all([refreshClaims(), refreshAudit()]);
+    return { claim: res.claim, payment };
+  };
+
+  const rejectClaim = async (claimId: string, reason: string, reviewedBy?: string): Promise<PaymentClaim> => {
+    const updated = await api.claims.reject(claimId, { reason, reviewed_by: reviewedBy || 'accountant' });
+    setClaims((prev) => prev.map((c) => (c.id === claimId ? updated : c)));
+    await refreshAudit();
+    return updated;
+  };
+
+  const scanNotFound = async (performedBy?: string) => {
+    const res = await api.claims.scanNotFound({ days: settings.notFoundDays, performed_by: performedBy });
+    await Promise.all([refreshClaims(), refreshAudit()]);
+    return res;
+  };
+
+  const importStatement = async (payload: {
+    fileName: string; fileHash: string; mapping: AppSettings['csvMapping'];
+    uploadedBy?: string; rows: unknown[]; matches: unknown[];
+  }) => {
+    const res = await api.statements.import({
+      file_name: payload.fileName,
+      file_hash: payload.fileHash,
+      mapping: payload.mapping || {},
+      uploaded_by: payload.uploadedBy,
+      rows: payload.rows,
+      matches: payload.matches,
+    });
+
+    const createdPayments = res.payments.map(mapApiPayment);
+    let acc = [...allocations];
+    const toPersist: Allocation[] = [];
+    for (const payment of createdPayments) {
+      const student = getStudentById(payment.studentId);
+      const grade = student ? getGradeById(student.gradeId) : undefined;
+      if (!student || !grade) continue;
+      const { allocations: newAllocs } = allocatePayment(payment, student, grade, acc, allocationRules());
+      acc = [...acc, ...newAllocs];
+      toPersist.push(...newAllocs);
+    }
+    if (toPersist.length > 0) {
+      await api.allocations.bulk({
+        allocations: toPersist.map((a) => ({
+          id: a.id, payment: a.paymentId, student: a.studentId,
+          fee_line_id: a.feeLineId, amount: a.amount, created_by: payload.uploadedBy || 'accountant',
+        })),
+        performed_by: payload.uploadedBy || 'accountant',
+      });
+      setAllocations((prev) => [...prev, ...toPersist]);
+    }
+    setPayments((prev) => [...createdPayments, ...prev]);
+    await Promise.all([refreshClaims(), refreshStatements(), refreshAudit(), refreshPayments()]);
+    return { importedRows: res.import.importedRows, skippedRows: res.import.skippedRows, payments: createdPayments };
+  };
+
+  const assignStatementRow = async (rowId: string, studentId: string, note?: string, performedBy?: string): Promise<Payment> => {
+    const res = await api.statements.assignRow(rowId, {
+      student_id: studentId,
+      note,
+      performed_by: performedBy || 'accountant',
+    });
+    const payment = mapApiPayment(res.payment);
+    setPayments((prev) => [payment, ...prev]);
+    await allocateAndPersist(payment, performedBy || 'accountant', [...allocations]);
+    await Promise.all([refreshStatements(), refreshAudit()]);
+    return payment;
+  };
+
+  const reallocatePayment = async (args: {
+    paymentId: string; studentId: string; targetFeeLineId: string; amount: number;
+    reason: string; performedBy: string;
+  }) => {
+    const student = getStudentById(args.studentId);
+    const grade = student ? getGradeById(student.gradeId) : undefined;
+    if (!student || !grade) throw new Error('Student or grade not found');
+
+    const payment = payments.find((p) => p.id === args.paymentId);
+    if (!payment) throw new Error('Payment not found');
+
+    const studentAllocs = allocations.filter((a) => a.studentId === args.studentId && !a.reversed);
+    const paymentAllocs = studentAllocs.filter((a) => a.paymentId === args.paymentId);
+    const beforeTotal = paymentAllocs.reduce((s, a) => s + a.amount, 0);
+
+    const result = libReallocatePayment(
+      payment, student, grade, studentAllocs,
+      args.targetFeeLineId, args.amount, args.reason, args.performedBy,
+      allocationRules()
+    );
+
+    const targetLine = buildFeeLines(grade, allocationRules()).find((l) => l.id === args.targetFeeLineId);
+
+    await api.allocations.bulk({
+      allocations: result.allocations.map((a) => ({
+        id: a.id, payment: a.paymentId, student: a.studentId,
+        fee_line_id: a.feeLineId, fee_group_name: a.feeGroupName, fee_item_label: a.feeItemLabel,
+        amount: a.amount, created_by: args.performedBy,
+      })),
+      reversed_ids: result.reversedIds,
+      audit: {
+        student: args.studentId,
+        payment: args.paymentId,
+        action: 'REALLOCATE',
+        performed_by: args.performedBy,
+        before: {
+          lines: paymentAllocs.map((a) => ({ fee_line_id: a.feeLineId, amount: Number(a.amount) })),
+          total: beforeTotal,
+        },
+        after: {
+          lines: result.allocations.map((a) => ({ fee_line_id: a.feeLineId, amount: Number(a.amount) })),
+          target: args.targetFeeLineId,
+          target_item: targetLine?.feeItemLabel,
+          moved: args.amount,
+        },
+        reason: args.reason,
+      },
+      performed_by: args.performedBy,
+    });
+
+    setAllocations((prev) => [
+      ...prev.map((a) => (result.reversedIds.includes(a.id) ? { ...a, reversed: true } : a)),
+      ...result.allocations,
+    ]);
+    await refreshAudit();
+  };
+
+  const updateSettings = async (partial: Partial<AppSettings>, performedBy?: string): Promise<void> => {
+    const entries: Array<[string, unknown]> = [];
+    if (partial.allocationOrder) entries.push(['allocation_order', partial.allocationOrder]);
+    if (partial.notFoundDays !== undefined) entries.push(['not_found_days', partial.notFoundDays]);
+    if (partial.csvMapping !== undefined) entries.push(['csv_mapping', partial.csvMapping]);
+    for (const [key, value] of entries) {
+      await api.settings.update(key, value);
+    }
+    setSettings((prev) => ({ ...prev, ...partial }));
+    await refreshAudit();
+    void performedBy;
+  };
+
+  const logAudit = async (entry: {
+    studentId?: string; paymentId?: string; action: AuditAction; performedBy: string;
+    reason?: string; before?: Record<string, unknown>; after?: Record<string, unknown>;
+  }) => {
+    await api.audit.create({
+      student: entry.studentId || null,
+      payment: entry.paymentId || null,
+      action: entry.action,
+      performed_by: entry.performedBy,
+      reason: entry.reason || '',
+      before: entry.before || {},
+      after: entry.after || {},
+    });
+    await refreshAudit();
   };
 
   const addStudent = async (
@@ -282,9 +642,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     await api.students.delete(id);
     setStudents((prev) => prev.filter((s) => s.id !== id));
     setPayments((prev) => prev.filter((p) => p.studentId !== id));
+    setAllocations((prev) => prev.filter((a) => a.studentId !== id));
+    setClaims((prev) => prev.filter((c) => c.studentId !== id));
   };
 
+  const refreshFinance = useCallback(async () => {
+    const financeRes = await api.finance.summary();
+    setFinanceSummary({
+      totalExpected: financeRes.summary.total_expected,
+      totalCollected: financeRes.summary.total_collected,
+      outstanding: financeRes.summary.outstanding,
+      collectionRate: financeRes.summary.collection_rate,
+    });
+  }, []);
+
   const addPayment = async (paymentData: Omit<Payment, 'id'>): Promise<Payment> => {
+    if (hasDuplicateTransactionId(payments, paymentData.reference)) {
+      throw new Error(`Transaction ID "${paymentData.reference}" already exists.`);
+    }
+
     const apiData = {
       student: paymentData.studentId,
       amount: paymentData.amount,
@@ -295,8 +671,40 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
     const created = await api.payments.create(apiData);
     const mapped = mapApiPayment(created);
+
+    const student = getStudentById(paymentData.studentId);
+    const grade = student ? getGradeById(student.gradeId) : undefined;
+    if (student && grade) {
+      const studentAllocations = allocations.filter((a) => a.studentId === student.id && !a.reversed);
+      const { allocations: newAllocations } = allocatePayment(mapped, student, grade, studentAllocations, allocationRules());
+      if (newAllocations.length > 0) {
+        await api.allocations.bulk({
+          allocations: newAllocations.map((a) => ({
+            id: a.id, payment: a.paymentId, student: a.studentId,
+            fee_line_id: a.feeLineId, amount: a.amount, created_by: 'accountant',
+          })),
+          audit: {
+            student: student.id,
+            payment: mapped.id,
+            action: 'PAYMENT_CREATE',
+            performed_by: 'accountant',
+            after: { amount: mapped.amount, reference: mapped.reference, method: mapped.method },
+            reason: `Payment recorded (${mapped.method})`,
+          },
+          performed_by: 'accountant',
+        });
+        setAllocations((prev) => [...prev, ...newAllocations]);
+      } else {
+        await logAudit({
+          studentId: student.id, paymentId: mapped.id, action: 'PAYMENT_CREATE',
+          performedBy: 'accountant', after: { amount: mapped.amount, reference: mapped.reference },
+          reason: `Payment recorded (${mapped.method})`,
+        });
+      }
+    }
+
     setPayments((prev) => [mapped, ...prev]);
-    await fetchAll();
+    await Promise.all([refreshFinance(), refreshAudit()]);
     return mapped;
   };
 
@@ -361,6 +769,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         grades,
         students,
         payments,
+        allocations,
+        claims,
+        statementRows,
+        statementImports,
+        auditEntries,
+        settings,
         loading,
         error,
         addStudent,
@@ -378,7 +792,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         getStudentTotalFees,
         getStudentPaidAmount,
         getStudentBalance,
+        getStudentCredit,
+        getStudentAccount,
         getStudentComputedStatus,
+        getAllocationBreakdown,
+        getStudentClaims,
+        submitClaim,
+        approveClaim,
+        rejectClaim,
+        scanNotFound,
+        refreshClaims,
+        importStatement,
+        assignStatementRow,
+        refreshStatements,
+        reallocatePayment,
+        updateSettings,
+        refreshAudit,
+        logAudit,
         financeSummary,
         monthlyCollections,
         feeTypeBreakdown,

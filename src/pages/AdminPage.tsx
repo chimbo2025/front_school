@@ -1,17 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { 
-  Users, 
-  BarChart3, 
-  Layers, 
-  Plus, 
-  Search, 
-  RefreshCw, 
-  Phone, 
-  Eye, 
+import {
+  Users,
+  BarChart3,
+  Layers,
+  Plus,
+  Search,
+  RefreshCw,
+  Phone,
+  Eye,
   Trash2,
   TrendingUp,
   Menu,
-  X
+  X,
+  ClipboardCheck,
+  ScrollText,
+  Settings as SettingsIcon
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatTsh, formatNumber } from '../config/schoolConfig';
@@ -20,6 +23,10 @@ import { GradeFeeAccordion } from '../components/GradeFeeAccordion';
 import { AdminGradePanel } from '../components/AdminGradePanel';
 import { AdminSidebar, AdminNavItem, AdminTab } from '../components/AdminSidebar';
 import { AdminRegisterForm } from '../components/AdminRegisterForm';
+import { CSVUpload } from '../components/CSVUpload';
+import { ReviewQueue } from '../components/ReviewQueue';
+import { AuditViewer } from '../components/AuditViewer';
+import { SettingsPanel } from '../components/SettingsPanel';
 import { TablePagination } from '../components/TablePagination';
 import { useIdleLogout } from '../hooks/useIdleLogout';
 import { LogOut, User as UserIcon } from 'lucide-react';
@@ -37,6 +44,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenFeesModa
     grades, 
     students, 
     payments, 
+    allocations,
+    claims,
+    auditEntries,
     loading,
     error,
     addGrade, 
@@ -47,6 +57,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenFeesModa
     getStudentPaidAmount,
     getStudentBalance,
     getStudentComputedStatus,
+    getStudentClaims,
     financeSummary,
     monthlyCollections,
     feeTypeBreakdown,
@@ -56,7 +67,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenFeesModa
   // 30-minute idle timeout auto-logout
   useIdleLogout(30);
 
-  const VALID_TABS: AdminTab[] = ['students', 'finance', 'grades', 'register'];
+  const VALID_TABS: AdminTab[] = ['students', 'finance', 'grades', 'register', 'review', 'audit', 'settings'];
 
   // Deep link support: /admin?tab=finance (used by the student file sidebar)
   const [activeTab, setActiveTab] = useState<AdminTab>(() => {
@@ -270,6 +281,14 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenFeesModa
       badgeClassName: 'bg-emerald-500/15 text-emerald-300',
     },
     {
+      id: 'review',
+      label: 'Review Queue',
+      hint: 'Claims & unclaimed money',
+      icon: ClipboardCheck,
+      badge: String(claims.filter((c) => c.status === 'PENDING' || c.status === 'NEEDS_REVIEW').length),
+      badgeClassName: 'bg-amber-500/15 text-amber-300',
+    },
+    {
       id: 'grades',
       label: 'Grades & Fees',
       hint: 'Fee structures',
@@ -282,6 +301,22 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenFeesModa
         { id: 'grades', label: 'Preview Fee Statement', action: 'preview-fees' },
       ],
     },
+    {
+      id: 'audit',
+      label: 'Audit Trail',
+      hint: 'Every approval & import',
+      icon: ScrollText,
+      badge: String(auditEntries.length),
+      badgeClassName: 'bg-slate-700 text-slate-200',
+    },
+    {
+      id: 'settings',
+      label: 'Settings',
+      hint: 'Allocation & review rules',
+      icon: SettingsIcon,
+      badge: '⚙',
+      badgeClassName: 'bg-slate-700 text-slate-200',
+    },
   ];
 
   const tabMeta: Record<AdminTab, { title: string; crumb: string }> = {
@@ -289,6 +324,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenFeesModa
     finance: { title: 'Finance & Collections', crumb: 'Finance' },
     grades: { title: 'Grades & Fee Structures', crumb: 'Grades & Fees' },
     register: { title: 'Register New Student', crumb: 'Grades & Fees / Register' },
+    review: { title: 'Payment Review Queue', crumb: 'Review Queue' },
+    audit: { title: 'Audit Trail', crumb: 'Audit Trail' },
+    settings: { title: 'Verification Settings', crumb: 'Settings' },
   };
 
   const handleResetData = () => {
@@ -935,6 +973,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenFeesModa
                   />
                 )}
               </div>
+
+              {/* Lipa Namba CSV Upload */}
+              <CSVUpload />
             </div>
           )}
 
@@ -1014,6 +1055,15 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenFeesModa
               onCancel={() => setActiveTab('students')}
             />
           )}
+
+          {/* ================= TAB: REVIEW QUEUE ================= */}
+          {activeTab === 'review' && <ReviewQueue />}
+
+          {/* ================= TAB: AUDIT TRAIL ================= */}
+          {activeTab === 'audit' && <AuditViewer />}
+
+          {/* ================= TAB: SETTINGS ================= */}
+          {activeTab === 'settings' && <SettingsPanel />}
 
         </div>
         </main>

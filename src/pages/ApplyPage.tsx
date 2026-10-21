@@ -204,6 +204,8 @@ export const ApplyPage: React.FC<ApplyPageProps> = ({
           onSaved={(student) => {
             setSubmittedStudent(student);
             window.scrollTo({ top: 0, behavior: 'smooth' });
+            // Jump straight to admission fee payment
+            window.setTimeout(() => setIsPaymentModalOpen(true), 500);
           }}
           onViewStudent={() => setIsFeesModalOpen(true)}
           onCancel={() => onNavigate('/')}

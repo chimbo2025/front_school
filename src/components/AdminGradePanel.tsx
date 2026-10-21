@@ -88,7 +88,8 @@ export const AdminGradePanel: React.FC<AdminGradePanelProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+    <>
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
       {/* ---------- Left: what the parent sees ---------- */}
       <div className="xl:col-span-5 space-y-3">
         <h4 className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
@@ -250,9 +251,9 @@ export const AdminGradePanel: React.FC<AdminGradePanelProps> = ({
       </div>
     </div>
 
-    {/* Delete Grade Confirmation Modal */}
-    {showDeleteConfirm && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-900/60 backdrop-blur-xs">
+      {/* Delete Grade Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-900/60 backdrop-blur-xs">
         <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
           <div className="flex items-center gap-3 p-5 bg-red-50 border-b border-red-100">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100">
@@ -290,9 +291,10 @@ export const AdminGradePanel: React.FC<AdminGradePanelProps> = ({
                 Delete Grade
               </button>
             </div>
-          </div>
-        </div>
+</div>
       </div>
+    </div>
     )}
+  </>
   );
 };

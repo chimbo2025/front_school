@@ -220,13 +220,15 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onOpenF
           </div>
 
           <div className="space-y-2 pt-1">
-            <button
-              onClick={() => handleNavClick('/apply')}
-              className="w-full py-3 px-4 bg-primary text-white font-semibold rounded-lg text-sm flex items-center justify-center gap-2 shadow-sm"
-            >
-              <span>Apply Now</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleNavClick('/apply')}
+                className="py-3 px-4 bg-primary text-white font-semibold rounded-lg text-sm flex items-center justify-center gap-2 shadow-sm"
+              >
+                <span>Apply Now</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
 
             {user ? (
               <div className="space-y-2">
