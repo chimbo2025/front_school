@@ -18,6 +18,7 @@ export default function App() {
   });
 
   const [isFeeModalOpen, setIsFeeModalOpen] = useState(false);
+  const [feeModalGradeId, setFeeModalGradeId] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(() => authService.getUser());
   const [authLoading, setAuthLoading] = useState(true);
 
@@ -76,6 +77,12 @@ const handleLogin = useCallback((userData: User) => {
     }
   };
 
+  /** Open the global fee drawer, optionally with a specific grade expanded. */
+  const openFeesModal = useCallback((gradeId?: string) => {
+    setFeeModalGradeId(gradeId ?? null);
+    setIsFeeModalOpen(true);
+  }, []);
+
   // Route matching
   const renderCurrentPage = () => {
     // Login route
@@ -102,7 +109,7 @@ const handleLogin = useCallback((userData: User) => {
         <StudentDetailPage
           studentId={studentId}
           onNavigate={navigate}
-          onOpenFeesModal={() => setIsFeeModalOpen(true)}
+          onOpenFeesModal={openFeesModal}
           user={user}
           onLogout={handleLogout}
         />
@@ -114,7 +121,7 @@ const handleLogin = useCallback((userData: User) => {
       return (
         <AdminPage
           onNavigate={navigate}
-          onOpenFeesModal={() => setIsFeeModalOpen(true)}
+          onOpenFeesModal={openFeesModal}
           onLogout={handleLogout}
           user={user}
         />
@@ -132,7 +139,7 @@ const handleLogin = useCallback((userData: User) => {
     return (
       <LandingPage
         onNavigate={navigate}
-        onOpenFeesModal={() => setIsFeeModalOpen(true)}
+        onOpenFeesModal={openFeesModal}
       />
     );
   };
@@ -158,7 +165,7 @@ const handleLogin = useCallback((userData: User) => {
           <Navbar
             currentPath={currentPath}
             onNavigate={navigate}
-            onOpenFeesModal={() => setIsFeeModalOpen(true)}
+            onOpenFeesModal={openFeesModal}
             user={user}
           />
         )}
@@ -172,6 +179,7 @@ const handleLogin = useCallback((userData: User) => {
         <FeeModal
           isOpen={isFeeModalOpen}
           onClose={() => setIsFeeModalOpen(false)}
+          selectedGradeId={feeModalGradeId ?? undefined}
           size="lg"
         />
       </div>

@@ -3,6 +3,7 @@ import { X, CheckCircle2, ShieldCheck, ArrowRight, Copy, Check } from 'lucide-re
 import { Student } from '../types';
 import { formatTsh, schoolConfig } from '../config/schoolConfig';
 import { useApp } from '../context/AppContext';
+import { authService } from '../services/auth';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -11,6 +12,11 @@ interface PaymentModalProps {
   defaultAmount?: number;
   title?: string;
   isAdmissionFeeOnly?: boolean;
+  /**
+   * Record the money as a payment claim (public parents, no login) instead of
+   * a confirmed payment (staff). Defaults to claim mode for anonymous users.
+   */
+  submitAsClaim?: boolean;
   onSuccess?: () => void;
 }
 
@@ -28,10 +34,12 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   defaultAmount,
   title = "Pay Admission Fee",
   isAdmissionFeeOnly = false,
+  submitAsClaim,
   onSuccess,
 }) => {
-  const { addPayment, getGradeById } = useApp();
+  const { addPayment, getGradeById, submitClaim } = useApp();
   const grade = getGradeById(student.gradeId);
+  const isClaimMode = submitAsClaim ?? !authService.isAuthenticated();
 
   // Default admission fee amount if not specified
   const admissionFeeItem = grade?.feeGroups
@@ -42,6 +50,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
   const [amount, setAmount] = useState<number>(initialAmount);
   const [txnId, setTxnId] = useState('');
+  const [payerPhone, setPayerPhone] = useState(student.parentPhone || '');
   const [note, setNote] = useState('');
   const [copied, setCopied] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -51,7 +60,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   if (!isOpen) return null;
 
   const reference = txnId.trim().toUpperCase();
-  const canSubmit = amount > 0 && reference.length > 0 && !isProcessing;
+  const canSubmit =
+    amount > 0 &&
+    reference.length > 0 &&
+    (!isClaimMode || payerPhone.trim().length > 0) &&
+    !isProcessing;
 
   const copyLipa = async () => {
     try {
@@ -69,17 +82,32 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
     setIsProcessing(true);
     try {
-      await addPayment({
-        studentId: student.id,
-        amount,
-        method: 'Lipa Namba',
-        date: new Date().toISOString().split('T')[0],
-        reference,
-        notes: [
-          isAdmissionFeeOnly ? 'Online Admission Fee Payment' : 'School Fee Installment',
-          note.trim(),
-        ].filter(Boolean).join(' — '),
-      });
+      const notes = [
+        isAdmissionFeeOnly ? 'Online Admission Fee Payment' : 'School Fee Installment',
+        note.trim(),
+      ].filter(Boolean).join(' — ');
+
+      if (isClaimMode) {
+        // Public parents are not logged in; record a claim for the bursar to verify.
+        await submitClaim({
+          studentId: student.id,
+          amount,
+          transactionId: reference,
+          paymentDate: new Date().toISOString().split('T')[0],
+          payerPhone: payerPhone.trim(),
+          method: 'Lipa Namba',
+          notes,
+        });
+      } else {
+        await addPayment({
+          studentId: student.id,
+          amount,
+          method: 'Lipa Namba',
+          date: new Date().toISOString().split('T')[0],
+          reference,
+          notes,
+        });
+      }
 
       setPaidReference(reference);
       setIsProcessing(false);
@@ -127,17 +155,28 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <CheckCircle2 className="w-8 h-8" />
             </div>
             <div>
-              <h4 className="text-lg font-bold text-slate-900">Payment Recorded!</h4>
+              <h4 className="text-lg font-bold text-slate-900">
+                {isClaimMode ? 'Payment Submitted for Verification' : 'Payment Recorded!'}
+              </h4>
               <p className="text-sm text-slate-600 mt-1">
-                Received <span className="font-semibold text-emerald-700">{formatTsh(amount)}</span> for {student.firstName}.
+                {isClaimMode ? 'We received your payment confirmation of ' : 'Received '}
+                <span className="font-semibold text-emerald-700">{formatTsh(amount)}</span> for {student.firstName}.
               </p>
-              <div className="mt-3 inline-block bg-slate-100 text-slate-800 text-xs px-3 py-1.5 rounded font-mono">
-                Transaction ID: {paidReference}
+              <div className="mt-3 inline-flex items-center gap-2">
+                <span className="inline-block bg-slate-100 text-slate-800 text-xs px-3 py-1.5 rounded font-mono">
+                  Transaction ID: {paidReference}
+                </span>
+                {isClaimMode && (
+                  <span className="inline-block bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-bold px-2 py-1 rounded">
+                    PENDING VERIFICATION
+                  </span>
+                )}
               </div>
             </div>
             <p className="text-xs text-slate-500 max-w-xs mx-auto">
-              The payment has been added to {student.firstName}'s fee balance and allocated to the
-              outstanding fee items.
+              {isClaimMode
+                ? `The bursar will verify this transaction and update ${student.firstName}'s fee balance. Keep the Transaction ID for follow-up.`
+                : `The payment has been added to ${student.firstName}'s fee balance and allocated to the outstanding fee items.`}
             </p>
             <div className="pt-2">
               <button
@@ -173,6 +212,26 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 Standard Admission Fee is 150,000 Tsh. You can pay partial or full.
               </p>
             </div>
+
+            {/* Payer phone — needed to match the mobile-money statement */}
+            {isClaimMode && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Payer Phone (M-Pesa / Airtel / Mixx) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  value={payerPhone}
+                  onChange={(e) => setPayerPhone(e.target.value)}
+                  placeholder="e.g. 0777 123 456"
+                  required
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm font-mono font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#7c3aed] focus:border-transparent"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Use the number that sent the payment so the bursar can match the transaction.
+                </p>
+              </div>
+            )}
 
             {/* Lipa Namba instructions */}
             <div className="rounded-xl border border-emerald-200 overflow-hidden shadow-xs">
@@ -251,8 +310,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             <div className="flex items-center gap-2 text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>
-                Payment is recorded instantly in this demo. In production, Lipa Namba payments are
-                reconciled against the school account statement.
+                {isClaimMode
+                  ? 'Your payment will be verified by the bursar before it is added to the fee balance.'
+                  : 'Payment is recorded instantly in this demo. In production, Lipa Namba payments are reconciled against the school account statement.'}
               </span>
             </div>
 
@@ -264,7 +324,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 className="w-full py-3 px-4 bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-semibold rounded-lg text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isProcessing ? (
-                  <span>Recording Payment...</span>
+                  <span>{isClaimMode ? 'Submitting Payment...' : 'Recording Payment...'}</span>
                 ) : (
                   <>
                     <span>Confirm Payment {formatTsh(amount)}</span>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Grade } from '../types';
 import { formatNumber } from '../config/schoolConfig';
+import { groupSubtotal, itemAmount } from '../lib/fees';
 
 interface FeeStatementProps {
   grade: Grade;
@@ -10,7 +11,7 @@ interface FeeStatementProps {
 export const FeeStatement: React.FC<FeeStatementProps> = ({ grade, className = '' }) => {
   // Calculate group subtotals and grand total
   const groupsWithSubtotals = (grade.feeGroups || []).map((group) => {
-    const subtotal = (group.items || []).reduce((sum, item) => sum + (item.amount || 0), 0);
+    const subtotal = groupSubtotal(group);
     return {
       ...group,
       subtotal,
@@ -44,7 +45,7 @@ export const FeeStatement: React.FC<FeeStatementProps> = ({ grade, className = '
               {(group.items || []).map((item) => (
                 <div key={item.id} className="flex justify-between items-center text-sm text-slate-800">
                   <span className="font-normal text-slate-700">{item.label}</span>
-                  <span className="font-mono text-slate-800 tabular-nums">{formatNumber(item.amount)}</span>
+                  <span className="font-mono text-slate-800 tabular-nums">{formatNumber(itemAmount(item))}</span>
                 </div>
               ))}
             </div>

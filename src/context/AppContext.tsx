@@ -5,6 +5,7 @@ import {
   StatementImport, AuditEntry, AuditAction, ClaimStatus,
 } from '../types';
 import { api, Grade as ApiGrade, Student as ApiStudent, StudentListItem, Payment as ApiPayment, ApiError } from '../services/api';
+import { gradeTotal, toAmount } from '../lib/fees';
 import { authService } from '../services/auth';
 import {
   computeStudentAccount, allocatePayment, getAllocationBreakdown as libGetAllocationBreakdown,
@@ -82,7 +83,7 @@ function mapApiGrade(g: ApiGrade): Grade {
     feeGroups: (g.fee_groups || []).map(fg => ({
       id: fg.id,
       name: fg.name,
-      items: (fg.items || []).map(i => ({ id: i.id, label: i.label, amount: i.amount }))
+      items: (fg.items || []).map(i => ({ id: i.id, label: i.label, amount: toAmount(i.amount) }))
     }))
   };
 }
@@ -174,22 +175,34 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (authed) setLoading(true);
 
     // Public data (grades/claims/settings endpoints allow anonymous access —
-    // needed by the parent portal and the public fee modal).
-    try {
-      const [gradesRes, claimsRes, settingsRes] = await Promise.all([
-        api.grades.list(),
-        api.claims.list(),
-        api.settings.list(),
-      ]);
-      setGrades(gradesRes.results.map(mapApiGrade));
-      setClaims(claimsRes.results);
+    // needed by the parent portal and the public fee modal). Loaded
+    // independently so one failing endpoint can't blank the fee structures.
+    const [gradesRes, claimsRes, settingsRes] = await Promise.allSettled([
+      api.grades.list(),
+      api.claims.list(),
+      api.settings.list(),
+    ] as const);
+
+    if (gradesRes.status === 'fulfilled') {
+      setGrades(gradesRes.value.results.map(mapApiGrade));
+    }
+    if (claimsRes.status === 'fulfilled') {
+      setClaims(claimsRes.value.results);
+    }
+    if (settingsRes.status === 'fulfilled') {
+      const loadedSettings = settingsRes.value;
       setSettings({
-        allocationOrder: settingsRes.allocationOrder?.length ? settingsRes.allocationOrder : DEFAULT_ALLOCATION_PRIORITY,
-        notFoundDays: settingsRes.notFoundDays || 3,
-        csvMapping: settingsRes.csvMapping || null,
+        allocationOrder: loadedSettings.allocationOrder?.length ? loadedSettings.allocationOrder : DEFAULT_ALLOCATION_PRIORITY,
+        notFoundDays: loadedSettings.notFoundDays || 3,
+        csvMapping: loadedSettings.csvMapping || null,
       });
-    } catch (e) {
-      if (authed) setError(e instanceof Error ? e.message : 'Failed to load data');
+    }
+
+    if (authed) {
+      const failure = [gradesRes, claimsRes, settingsRes].find((r) => r.status === 'rejected');
+      if (failure && failure.status === 'rejected') {
+        setError(failure.reason instanceof Error ? failure.reason.message : 'Failed to load data');
+      }
     }
 
     if (!authed) {
@@ -264,11 +277,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const getGradeTotalFees = (grade: Grade): number => {
-    if (!grade || !grade.feeGroups) return 0;
-    return grade.feeGroups.reduce((accGroup, group) => {
-      const groupSum = group.items?.reduce((accItem, item) => accItem + (item.amount || 0), 0) || 0;
-      return accGroup + groupSum;
-    }, 0);
+    return gradeTotal(grade);
   };
 
   const getStudentById = (id: string): Student | undefined => {
@@ -395,10 +404,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     studentId: string; amount: number; transactionId: string; paymentDate: string;
     payerPhone: string; method?: PaymentMethod; screenshot?: string; notes?: string;
   }): Promise<PaymentClaim> => {
+    const reference = (claimData.transactionId || '').trim().toUpperCase();
+
+    if (reference && hasDuplicateTransactionId(payments, reference)) {
+      throw new Error(`Transaction ID "${reference}" has already been recorded.`);
+    }
+    if (reference && claims.some((c) => c.transactionId.toUpperCase() === reference && c.status !== 'REJECTED')) {
+      throw new Error(`Transaction ID "${reference}" has already been submitted.`);
+    }
+
     const created = await api.claims.create({
       student: claimData.studentId,
       amount: claimData.amount,
-      transaction_id: (claimData.transactionId || '').trim().toUpperCase(),
+      transaction_id: reference,
       payment_date: claimData.paymentDate,
       payer_phone: claimData.payerPhone,
       method: claimData.method || '',
@@ -717,7 +735,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       fee_groups: gradeData.feeGroups.map(fg => ({
         id: fg.id,
         name: fg.name,
-        items: fg.items.map(i => ({ id: i.id, label: i.label, amount: i.amount }))
+        items: fg.items.map(i => ({ id: i.id, label: i.label, amount: toAmount(i.amount) }))
       }))
     };
     const created = await api.grades.create(apiData);
@@ -735,7 +753,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       apiData.fee_groups = data.feeGroups.map(fg => ({
         id: fg.id,
         name: fg.name,
-        items: fg.items.map(i => ({ id: i.id, label: i.label, amount: i.amount }))
+        items: fg.items.map(i => ({ id: i.id, label: i.label, amount: toAmount(i.amount) }))
       }));
     }
     await api.grades.update(id, apiData);

@@ -19,6 +19,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { formatTsh, formatNumber } from '../config/schoolConfig';
 import { FeeGroup, StudentStatus } from '../types';
+import { gradeTotal, groupSubtotal, toAmount } from '../lib/fees';
 import { GradeFeeAccordion } from '../components/GradeFeeAccordion';
 import { AdminGradePanel } from '../components/AdminGradePanel';
 import { AdminSidebar, AdminNavItem, AdminTab } from '../components/AdminSidebar';
@@ -1023,12 +1024,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, onOpenFeesModa
                       {grade.feeGroups.length}
                     </span>
                     <span className="lg:col-span-1 text-right font-mono text-xs font-bold text-[#16a34a] tabular-nums">
-                      {formatNumber(
-                        grade.feeGroups.reduce(
-                          (sum, g) => sum + g.items.reduce((s, i) => s + (i.amount || 0), 0),
-                          0
-                        )
-                      )}{' '}
+                      {formatNumber(gradeTotal(grade))}{' '}
                       Tsh
                     </span>
                   </>

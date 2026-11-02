@@ -6,7 +6,7 @@ import { authService, User, triggerAuthLogout } from '../services/auth';
 interface NavbarProps {
   currentPath: string;
   onNavigate: (path: string) => void;
-  onOpenFeesModal: () => void;
+  onOpenFeesModal: (gradeId?: string) => void;
   user: User | null;
 }
 
@@ -87,7 +87,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate, onOpenF
               Grades
             </button>
             <button
-              onClick={onOpenFeesModal}
+              onClick={() => onOpenFeesModal()}
               className="hover:text-primary transition-colors cursor-pointer"
             >
               Fee Structure

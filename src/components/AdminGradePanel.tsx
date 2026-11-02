@@ -12,6 +12,7 @@ import { useApp } from '../context/AppContext';
 import { formatNumber } from '../config/schoolConfig';
 import { FeeGroup, Grade } from '../types';
 import { FeeStatement } from './FeeStatement';
+import { gradeTotal, groupSubtotal, itemAmount } from '../lib/fees';
 
 interface AdminGradePanelProps {
   grade: Grade;
@@ -31,12 +32,15 @@ export const AdminGradePanel: React.FC<AdminGradePanelProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const enrolled = students.filter((s) => s.gradeId === grade.id);
-  const grandTotal = grade.feeGroups.reduce(
-    (sum, g) => sum + g.items.reduce((s, i) => s + (i.amount || 0), 0),
-    0
-  );
+  const grandTotal = gradeTotal(grade);
 
-  const commit = (feeGroups: FeeGroup[]) => updateGrade(grade.id, { feeGroups });
+  const commit = async (feeGroups: FeeGroup[]) => {
+    try {
+      await updateGrade(grade.id, { feeGroups });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to save the fee structure.');
+    }
+  };
 
   const updateGroupName = (groupIndex: number, name: string) => {
     const next = grade.feeGroups.map((g, i) => (i === groupIndex ? { ...g, name } : g));
@@ -111,7 +115,7 @@ export const AdminGradePanel: React.FC<AdminGradePanelProps> = ({
 
         <div className="space-y-3">
           {(grade.feeGroups || []).map((group, gi) => {
-            const subtotal = (group.items || []).reduce((s, i) => s + (i.amount || 0), 0);
+            const subtotal = groupSubtotal(group);
             return (
               <div key={group.id} className="rounded-xl border border-slate-200 bg-white overflow-hidden">
                 <div className="flex items-center gap-2 bg-slate-50 border-b border-slate-200 px-3 py-2">
@@ -149,7 +153,7 @@ export const AdminGradePanel: React.FC<AdminGradePanelProps> = ({
                           type="number"
                           min={0}
                           step={1000}
-                          value={item.amount}
+                          value={itemAmount(item)}
                           onChange={(e) =>
                             updateItem(gi, ii, { amount: Number(e.target.value) || 0 })
                           }

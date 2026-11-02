@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { 
   GraduationCap, 
   ArrowRight, 
@@ -16,16 +16,10 @@ import {
   FileText, 
   Laptop, 
   Palette, 
-  Activity,
-  Calendar,
-  Clock,
-  ChevronRight,
-  ChevronDown,
-  Wallet
+  Activity
 } from 'lucide-react';
-import { schoolConfig, formatNumber, formatTsh } from '../config/schoolConfig';
+import { schoolConfig } from '../config/schoolConfig';
 import { useApp } from '../context/AppContext';
-import { GradeFeeAccordion } from '../components/GradeFeeAccordion';
 
 // Generated image assets
 import heroImage from '../assets/images/hero_students_3d_1791118488375.jpg';
@@ -35,21 +29,21 @@ import creativeArtsImg from '../assets/images/campus_creative_arts_1791118525047
 
 interface LandingPageProps {
   onNavigate: (path: string) => void;
-  onOpenFeesModal: () => void;
+  /** Opens the fee-structure drawer, optionally focused on one grade. */
+  onOpenFeesModal: (gradeId?: string) => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFeesModal }) => {
   const { grades } = useApp();
   const [activeFacilityModal, setActiveFacilityModal] = useState<string | null>(null);
-  const [openGradeId, setOpenGradeId] = useState<string | null>(grades[0]?.id ?? null);
-  const feesSectionRef = useRef<HTMLElement | null>(null);
 
-  const scrollToFees = (gradeId?: string) => {
-    const target = gradeId ?? grades[0]?.id ?? null;
-    if (target) setOpenGradeId(target);
-    requestAnimationFrame(() => {
-      feesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
+  /** Open the fee drawer, matching a program card's "Grade 1 - Grade 2" label. */
+  const openFeesForProgram = (programGrades: string) => {
+    const match = programGrades.match(/Grade\s*(\d+)/i);
+    const grade = match
+      ? grades.find((g) => g.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(`grade${match[1]}`))
+      : undefined;
+    onOpenFeesModal(grade?.id ?? grades[0]?.id);
   };
 
   const stats = [
@@ -219,7 +213,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
                 </button>
 
                 <button
-                  onClick={onOpenFeesModal}
+                  onClick={() => onOpenFeesModal(grades[0]?.id)}
                   className="w-full sm:w-auto px-5 py-3.5 bg-white/10 hover:bg-white/20 text-white font-medium rounded-xl border border-white/20 backdrop-blur-xs transition-colors flex items-center justify-center gap-2 text-base sm:text-lg cursor-pointer"
                 >
                   <FileText className="w-4 h-4 text-primary" />
@@ -426,7 +420,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
                           <ArrowRight className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => scrollToFees()}
+                          onClick={() => openFeesForProgram(prog.grades)}
                           className="w-full py-2 px-3 border border-border hover:bg-slate-50 bg-white text-slate-700 rounded-lg text-sm font-medium transition-colors cursor-pointer"
                         >
                           View Fee Breakdown
@@ -580,7 +574,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
                 <ArrowRight className="w-4 h-4" />
               </button>
               <button
-                onClick={onOpenFeesModal}
+                onClick={() => onOpenFeesModal(grades[0]?.id)}
                 className="w-full sm:w-auto px-5 py-3.5 bg-white/10 hover:bg-white/20 text-white font-medium rounded-xl border border-white/20 transition-colors text-sm sm:text-base cursor-pointer"
               >
                 View Fees Modal
@@ -635,7 +629,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
               <ul className="space-y-2 text-sm">
                 <li><button onClick={() => onNavigate('/')} className="hover:text-white cursor-pointer">Home</button></li>
                 <li><button onClick={() => onNavigate('/apply')} className="hover:text-white cursor-pointer">Apply Online</button></li>
-                <li><button onClick={onOpenFeesModal} className="hover:text-white cursor-pointer">Fee Structure (Tsh)</button></li>
+                <li><button onClick={() => onOpenFeesModal(grades[0]?.id)} className="hover:text-white cursor-pointer">Fee Structure (Tsh)</button></li>
                 <li><button onClick={() => onNavigate('/admin')} className="hover:text-white cursor-pointer">Admin Staff Portal</button></li>
               </ul>
             </div>
@@ -649,7 +643,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenFees
                 {grades.map((g) => (
                   <li key={g.id}>
                     <button 
-                      onClick={() => scrollToFees(g.id)} 
+                      onClick={() => onOpenFeesModal(g.id)} 
                       className="hover:text-white cursor-pointer"
                     >
                       {g.name} Curriculum & Fees

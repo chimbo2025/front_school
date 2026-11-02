@@ -192,10 +192,12 @@ export const authenticatedFetch = async (
     const hadSession = !!accessToken;
 
     // No session, or the refresh endpoint itself failed: stop here
-    if (fullUrl.includes('/auth/refresh') || !authService.getRefreshToken()) {
-      authService.clear();
-      if (hadSession) triggerAuthLogout();   // only if the user WAS logged in
-      throw new Error('Not authenticated');
+        if (fullUrl.includes('/auth/refresh') || !authService.getRefreshToken()) {
+      if (hadSession) {
+        authService.clear();
+        triggerAuthLogout();   // only if the user WAS logged in
+      }
+      throw new Error(hadSession ? 'Session expired' : 'Not authenticated');
     }
 
     if (!isRefreshing) {

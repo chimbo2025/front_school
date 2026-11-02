@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, FileText, Phone } from 'lucide-react';
+import { X, FileText, Phone, Wallet } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Grade } from '../types';
 import { FeeStatement } from './FeeStatement';
 import { GradeFeeAccordion } from './GradeFeeAccordion';
 import type { AccordionColumn } from './GradeFeeAccordion';
 import { formatNumber, schoolConfig } from '../config/schoolConfig';
+import { gradeTotal } from '../lib/fees';
 
 /** Drawer width from the `sm` breakpoint up. Always full width on phones. */
 const WIDTH_CLASSES = {
@@ -31,11 +32,7 @@ const MODAL_COLUMNS: AccordionColumn[] = [
   { label: 'Total / Year', span: 'lg:col-span-3', align: 'right' },
 ];
 
-const totalOf = (grade: Grade) =>
-  grade.feeGroups.reduce(
-    (sum, group) => sum + group.items.reduce((s, item) => s + (item.amount || 0), 0),
-    0
-  );
+const totalOf = (grade: Grade) => gradeTotal(grade);
 
 /**
  * Full-screen fee structure viewer. The panel swings in from the right edge of
@@ -47,7 +44,7 @@ export const FeeModal: React.FC<FeeModalProps> = ({
   selectedGradeId,
   size = 'md',
 }) => {
-  const { grades } = useApp();
+  const { grades, loading } = useApp();
 
   // Kept mounted briefly after `isOpen` flips to false so the closing
   // animation has something to play on.
@@ -146,7 +143,13 @@ export const FeeModal: React.FC<FeeModalProps> = ({
             <div className="text-xs sm:text-sm text-slate-600 bg-emerald-50 border-l-4 border-[#16a34a] p-3 rounded-r-lg">
               <span className="font-semibold text-emerald-900">Note: </span>
               Fees can be paid in full or across three school terms via M-Pesa, Mixx by Yas,
-              Airtel Money, or Bank Deposit. For fee inquiries, contact our bursar at{' '}
+              Airtel Money, Lipa Namba, or Bank Deposit. Pay via{' '}
+              <span className="font-semibold text-emerald-900">Lipa Namba</span> using account
+              number{' '}
+              <span className="font-mono font-bold text-emerald-900">
+                {schoolConfig.lipaNamba}
+              </span>
+              . For fee inquiries, contact our bursar at{' '}
               <a
                 href={`tel:${schoolConfig.phone.replace(/\s+/g, '')}`}
                 className="font-semibold text-emerald-800 underline"
@@ -156,24 +159,52 @@ export const FeeModal: React.FC<FeeModalProps> = ({
               .
             </div>
 
-            <GradeFeeAccordion
-              variant="row"
-              framed={false}
-              columns={MODAL_COLUMNS}
-              grades={grades}
-              defaultOpenId={selectedGradeId}
-              renderHeaderExtra={(grade) => (
-                <>
-                  <span className="lg:col-span-2 text-xs text-slate-600">
-                    {grade.ageRange || '—'}
-                  </span>
-                  <span className="lg:col-span-3 text-right font-mono text-xs font-bold text-[#16a34a] tabular-nums">
-                    {formatNumber(totalOf(grade))} Tsh
-                  </span>
-                </>
-              )}
-              renderPanel={(grade) => <FeeStatement grade={grade} />}
-            />
+            {grades.length === 0 ? (
+              <div className="text-center bg-white border border-dashed border-slate-300 rounded-2xl py-12 px-6">
+                {loading ? (
+                  <>
+                    <div className="w-8 h-8 border-4 border-[#7c3aed] border-t-transparent rounded-full animate-spin mx-auto" />
+                    <p className="mt-3 text-sm font-semibold text-slate-600">Loading fee structure…</p>
+                  </>
+                ) : (
+                  <>
+                    <Wallet className="w-8 h-8 text-slate-300 mx-auto" />
+                    <p className="mt-3 text-sm font-semibold text-slate-700">
+                      Fee structure is being updated.
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Please call the bursar on{' '}
+                      <a
+                        href={`tel:${schoolConfig.phone.replace(/\s+/g, '')}`}
+                        className="font-semibold text-emerald-700 underline"
+                      >
+                        {schoolConfig.phone}
+                      </a>{' '}
+                      for the current fees.
+                    </p>
+                  </>
+                )}
+              </div>
+            ) : (
+              <GradeFeeAccordion
+                variant="row"
+                framed={false}
+                columns={MODAL_COLUMNS}
+                grades={grades}
+                defaultOpenId={selectedGradeId}
+                renderHeaderExtra={(grade) => (
+                  <>
+                    <span className="lg:col-span-2 text-xs text-slate-600">
+                      {grade.ageRange || '—'}
+                    </span>
+                    <span className="lg:col-span-3 text-right font-mono text-xs font-bold text-[#16a34a] tabular-nums">
+                      {formatNumber(totalOf(grade))} Tsh
+                    </span>
+                  </>
+                )}
+                renderPanel={(grade) => <FeeStatement grade={grade} />}
+              />
+            )}
           </div>
 
           {/* Footer */}

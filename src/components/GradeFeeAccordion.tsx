@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ChevronDown, Wallet, Phone } from 'lucide-react';
 import { Grade } from '../types';
 import { formatNumber, schoolConfig } from '../config/schoolConfig';
+import { groupSubtotal, gradeTotal, itemAmount } from '../lib/fees';
 
 interface GradeFeeAccordionProps {
   grades: Grade[];
@@ -51,11 +52,7 @@ const DEFAULT_COLUMNS: AccordionColumn[] = [
   { label: 'Total / Year', span: 'lg:col-span-1' },
 ];
 
-const totalOf = (grade: Grade) =>
-  (grade.feeGroups || []).reduce(
-    (sum, group) => sum + (group.items || []).reduce((s, item) => s + (item.amount || 0), 0),
-    0
-  );
+const totalOf = (grade: Grade) => gradeTotal(grade);
 
 const countItems = (grade: Grade) =>
   (grade.feeGroups || []).reduce((sum, group) => sum + (group.items || []).length, 0);
@@ -272,10 +269,7 @@ export const GradeFeeAccordion: React.FC<GradeFeeAccordionProps> = ({
                     {/* Fee groups */}
                     <div className="mt-3 space-y-3">
                       {(grade.feeGroups || []).map((group) => {
-                        const subtotal = (group.items || []).reduce(
-                          (sum, item) => sum + (item.amount || 0),
-                          0
-                        );
+                        const subtotal = groupSubtotal(group);
                         return (
                           <div
                             key={group.id}
@@ -297,7 +291,7 @@ export const GradeFeeAccordion: React.FC<GradeFeeAccordionProps> = ({
                                 >
                                   <span className="text-slate-700">{item.label}</span>
                                   <span className="font-mono text-slate-800 tabular-nums shrink-0">
-                                    {formatNumber(item.amount)} Tsh
+                                    {formatNumber(itemAmount(item))} Tsh
                                   </span>
                                 </div>
                               ))}

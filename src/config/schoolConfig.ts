@@ -45,5 +45,6 @@ export function formatTsh(amount: number): string {
  * Format plain number with commas
  */
 export function formatNumber(amount: number): string {
-  return new Intl.NumberFormat('en-US').format(amount);
+  const value = Number(amount);
+  return new Intl.NumberFormat('en-US').format(Number.isFinite(value) ? value : 0);
 }

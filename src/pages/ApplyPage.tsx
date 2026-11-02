@@ -35,6 +35,7 @@ export const ApplyPage: React.FC<ApplyPageProps> = ({
   const [submittedStudent, setSubmittedStudent] = useState<Student | null>(null);
   const [isFeesModalOpen, setIsFeesModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [paymentSubmitted, setPaymentSubmitted] = useState(false);
 
   // ================= CONFIRMATION VIEW =================
   if (submittedStudent) {
@@ -90,17 +91,24 @@ export const ApplyPage: React.FC<ApplyPageProps> = ({
               Next Step: Pay Admission Fee
             </h3>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              To secure your child's entrance interview and slot evaluation, please pay the non-refundable admission fee (150,000 Tsh) using M-Pesa, Mixx by Yas, Airtel Money, or Direct Bank Deposit.
+              To secure your child's entrance interview and slot evaluation, please pay the non-refundable admission fee (150,000 Tsh) using M-Pesa, Mixx by Yas, Airtel Money, Lipa Namba ({schoolConfig.lipaNamba}), or Direct Bank Deposit.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              <button
-                onClick={() => setIsPaymentModalOpen(true)}
-                className="flex-1 py-3 px-4 bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-bold rounded-lg text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <CreditCard className="w-4 h-4" />
-                <span>Pay Admission Fee (150,000 Tsh)</span>
-              </button>
+              {paymentSubmitted ? (
+                <div className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg text-sm font-bold">
+                  <CheckCircle2 className="w-4 h-4 text-amber-600" />
+                  <span>Payment submitted — pending bursar verification</span>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsPaymentModalOpen(true)}
+                  className="flex-1 py-3 px-4 bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-bold rounded-lg text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  <span>Pay Admission Fee (150,000 Tsh)</span>
+                </button>
+              )}
 
               <button
                 onClick={() => window.print()}
@@ -141,7 +149,9 @@ export const ApplyPage: React.FC<ApplyPageProps> = ({
           onClose={() => setIsPaymentModalOpen(false)}
           student={submittedStudent}
           isAdmissionFeeOnly={true}
+          submitAsClaim
           title="Pay Admission Fee"
+          onSuccess={() => setPaymentSubmitted(true)}
         />
       </div>
     );
