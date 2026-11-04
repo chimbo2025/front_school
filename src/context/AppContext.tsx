@@ -142,6 +142,34 @@ const emptyFeeTypeBreakdown = [
   { name: 'Admission & Kit Fee', amount: 0, percentage: 0, color: '#7c3aed' },
 ];
 
+function computeMonthlyCollections(payments: Payment[]): { month: string; amount: number }[] {
+  const monthlyMap = new Map<string, number>();
+
+  for (const payment of payments) {
+    const date = new Date(payment.date);
+    // Format: "Oct 25", "Nov 25", "Jan 26", etc.
+    const monthName = date.toLocaleString('en-TZ', { month: 'short' });
+    const year = date.getFullYear();
+    const key = `${monthName} ${year}`;
+
+    monthlyMap.set(key, (monthlyMap.get(key) || 0) + payment.amount);
+  }
+
+  // Sort chronologically
+  const monthOrder: Record<string, number> = {
+    'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+    'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12,
+  };
+
+  const sorted = Array.from(monthlyMap.entries()).sort(([a], [b]) => {
+    const aOrder = monthOrder[a.split(' ')[0]] || 0;
+    const bOrder = monthOrder[b.split(' ')[0]] || 0;
+    return aOrder - bOrder;
+  });
+
+  return sorted.map(([month, amount]) => ({ month, amount }));
+}
+
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [grades, setGrades] = useState<Grade[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -159,14 +187,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [financeSummary, setFinanceSummary] = useState<FinanceSummary>(emptyFinanceSummary);
-  const [monthlyCollections] = useState<{ month: string; amount: number }[]>([
-    { month: 'Oct 25', amount: 1450000 },
-    { month: 'Nov 25', amount: 2300000 },
-    { month: 'Dec 25', amount: 3100000 },
-    { month: 'Jan 26', amount: 8250000 },
-    { month: 'Feb 26', amount: 4850000 },
-    { month: 'Mar 26', amount: 1950000 },
-  ]);
+  const [monthlyCollections, setMonthlyCollections] = useState<{ month: string; amount: number }[]>([]);
   const [feeTypeBreakdown] = useState<{ name: string; amount: number; percentage: number; color: string }[]>(emptyFeeTypeBreakdown);
 
   const fetchAll = useCallback(async () => {
@@ -234,6 +255,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setStatementImports(imports);
       setAuditEntries(audit);
       setError(null);
+
+      // Compute monthly collections from payments (replaces hardcoded mock default)
+      setMonthlyCollections(computeMonthlyCollections(payRes.results.map(mapApiPayment)));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load data');
     } finally {
